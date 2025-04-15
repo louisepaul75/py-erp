@@ -164,12 +164,15 @@ if [ -n "${NEXT_PUBLIC_API_URL:-}" ]; then
 fi
 
 # Ensure frontend dependencies are installed BEFORE starting supervisord
-if [ -d "/app/frontend-react" ]; then
-    echo "Ensuring frontend dependencies are fully installed..."
-    cd /app/frontend-react && npm install --legacy-peer-deps
-    echo "Frontend dependencies installation complete."
-    cd /app # Change back to the main app directory
-fi
+# The dependencies should already be installed during the Docker build process.
+# Running npm install again here can be very slow and cause hangs,
+# especially with volume mounts.
+# if [ -d "/app/frontend-react" ]; then
+#     echo "Ensuring frontend dependencies are fully installed..."
+#     cd /app/frontend-react && npm install --legacy-peer-deps
+#     echo "Frontend dependencies installation complete."
+#     cd /app # Change back to the main app directory
+# fi
 
 # Start supervisord
 echo "Starting supervisord..."

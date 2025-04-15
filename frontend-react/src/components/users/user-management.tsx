@@ -2,9 +2,9 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { PlusCircle, Pencil, Trash2, UserPlus, ShieldAlert, Power, AlertTriangle } from "lucide-react"
+import { PlusCircle, Pencil, Trash2, UserPlus, ShieldAlert, Power, AlertTriangle, Search, Filter } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -47,6 +47,8 @@ export function UserManagement() {
     confirmPassword: "",
   })
   const [createError, setCreateError] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([])
 
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false)
   const [resetPasswordMessage, setResetPasswordMessage] = useState("")
@@ -58,6 +60,19 @@ export function UserManagement() {
     queryKey: ["users"],
     queryFn: fetchUsers,
   })
+
+  useEffect(() => {
+    if (users) {
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      const filtered = users.filter(user =>
+        user.name.toLowerCase().includes(lowerSearchTerm) ||
+        user.email.toLowerCase().includes(lowerSearchTerm)
+      );
+      setFilteredUsers(filtered);
+    } else {
+      setFilteredUsers([]);
+    }
+  }, [users, searchTerm]);
 
   const createUserMutation = useMutation({
     mutationFn: createUser,
@@ -199,14 +214,42 @@ export function UserManagement() {
     setIsGroupsDialogOpen(true)
   }
 
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value)
+  }
+
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Users</CardTitle>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add User
-        </Button>
+      <CardHeader>
+        <div className="flex flex-row items-center justify-between mb-4">
+          <CardTitle>Users</CardTitle>
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add User
+          </Button>
+        </div>
+        <div className="flex items-center justify-between space-x-2">
+          <div className="relative flex-grow">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              type="search"
+              placeholder="Search Name or Email..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="pl-10 h-9 w-full"
+              disabled={isLoading}
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Filter Users"
+            onClick={() => alert('Filter button clicked - Implement filter logic')}
+            disabled={isLoading}
+          >
+            <Filter className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -224,7 +267,7 @@ export function UserManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>

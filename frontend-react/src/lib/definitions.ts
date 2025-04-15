@@ -57,13 +57,38 @@ export type FullCustomerProfile = Customer & {
   documents?: CustomerDocument[]; // Added documents
 };
 
+// Define a simple User summary type for notes
+export type UserSummary = {
+  id: string;
+  name: string;
+  avatar?: string | null; // Optional avatar URL
+};
+
+// Define the NoteType enum based on usage in customer-notes-block.tsx
+export enum NoteType {
+  INTERNAL = 'INTERNAL',
+  SHIPPING = 'SHIPPING',
+  PRINTABLE = 'PRINTABLE',
+}
+
 export type CustomerNote = {
   id: string; // Assuming UUID
   customer_id: string; // Foreign key to Customer
   content: string;
-  created_at: string; // Or Date object, depending on API/preference
-  created_by?: string | null; // Optional: User ID or name who created the note
+  timestamp: string; // Renamed from created_at, assuming ISO string format
+  user: UserSummary; // Replaced created_by with user object
+  noteType: NoteType; // Add the type field here
 };
+
+// Enum for Customer Inactivation Reasons
+export enum InactiveReason {
+  NoOrders = 'NO_ORDERS',
+  BadPayment = 'BAD_PAYMENT',
+  CustomerRequest = 'CUSTOMER_REQUEST',
+  Competitor = 'COMPETITOR',
+  OutOfBusiness = 'OUT_OF_BUSINESS',
+  Other = 'OTHER',
+}
 
 // Type for Customer Documents
 export type CustomerDocument = {

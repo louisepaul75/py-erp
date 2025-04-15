@@ -346,57 +346,11 @@ class ProductListAPIView(APIView):
         self.direct_search = kwargs.pop('direct_search', False)
         super().__init__(*args, **kwargs)
     
-    def get_product_data(self, product):
-        """Helper method to format product data for API response."""
-        product_data = {
-            "id": product.id,
-            "sku": product.sku,
-            "name": product.name,
-            "description": product.description,
-            "is_active": product.is_active,
-            "is_new": product.is_new if hasattr(product, "is_new") else False,
-            "legacy_base_sku": getattr(product, "legacy_base_sku", None),
-        }
-        
-        # Add primary image if available
-        if hasattr(product, "images") and product.images.exists():
-            primary_image = None
-            
-            # Find the best image to use as primary
-            for img_type in ["Produktfoto", ""]:
-                for is_front in [True, False]:
-                    for is_primary in [True, False]:
-                        if not primary_image:
-                            filters = {}
-                            if img_type:
-                                filters["image_type__iexact"] = img_type
-                            if is_front:
-                                filters["is_front"] = is_front
-                            if is_primary:
-                                filters["is_primary"] = is_primary
-                                
-                            candidate = product.images.filter(**filters).first()
-                            if candidate:
-                                primary_image = candidate
-            
-            # Fallback to first image if no primary found
-            if not primary_image and product.images.exists():
-                primary_image = product.images.first()
-                
-            if primary_image:
-                product_data["primary_image"] = {
-                    "id": primary_image.id,
-                    "url": primary_image.image_url,
-                    "thumbnail_url": getattr(primary_image, "thumbnail_url", primary_image.image_url),
-                }
-        
-        return product_data
-    
     def get(self, request):
         """Handle GET request for product listing with filtering and pagination."""
         try:
-            # Start with the base queryset
-            base_queryset = ParentProduct.objects.all()
+            # Start with the base queryset and annotate with variant count
+            base_queryset = ParentProduct.objects.annotate(variants_count=Count('variants'))
             
             # Apply search filter (this is the most important part)
             search_query = request.GET.get("q")
@@ -517,18 +471,16 @@ class ProductListAPIView(APIView):
                 start_index = 0
                 end_index = page_size
                 
-            products = products[start_index:end_index]
+            paginated_products = products[start_index:end_index]
             
-            # Format the response data
-            products_data = []
-            for product in products:
-                product_data = self.get_product_data(product)
-                products_data.append(product_data)
+            # Format the response data using the serializer
+            from pyerp.business_modules.products.serializers import ParentProductSerializer
+            serializer = ParentProductSerializer(paginated_products, many=True)
             
             # Return the response with pagination info
             return Response({
                 "count": total_count,
-                "results": products_data,
+                "results": serializer.data,
                 "page": page,
                 "page_size": page_size,
                 "total_pages": max(1, (total_count + page_size - 1) // page_size),

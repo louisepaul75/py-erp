@@ -13,7 +13,7 @@ import { authService } from "@/lib/auth/authService";
 
 export async function createSyncWorkflow(workflow: Omit<SyncWorkflow, "id" | "last_job_status" | "last_run_time">): Promise<SyncWorkflow> {
   const token = await authService.getToken();
-  const endpoint = `/api/sync/system-integrations/workflows/`; 
+  const endpoint = `/sync/workflows/`; 
 
   const response = await fetch(API_URL + endpoint, {
     method: "POST",
@@ -141,8 +141,8 @@ export async function fetchSystemIntegrationData(
 ): Promise<SystemIntegrationData> {
   const token = await authService.getToken();
   // Ensure the endpoint starts with /api/
-  const endpoint = `/api/sync/system-integrations/`; 
-
+  const endpoint = `/sync/system-integrations/`; 
+  
   const response = await fetch(API_URL + endpoint, {
     headers: {
       Accept: "application/json",
@@ -150,9 +150,7 @@ export async function fetchSystemIntegrationData(
     },
     signal: signal,
   });
-  
-  console.log("RESPONSE", response)
-  return mockSystemIntegrationData
+  return await response.json()
 }
 
 /**
@@ -165,7 +163,7 @@ export async function updateConnectionStatus(
 ): Promise<SystemIntegrationData> {
   const token = await authService.getToken();
   // Ensure the endpoint starts with /api/
-  const endpoint = `/api/external-api/connections/${connectionName}/`; 
+  const endpoint = `/external/connections/${connectionName}/`; 
 
   const response = await fetch(API_URL + endpoint, {
     method: "POST",
@@ -195,7 +193,7 @@ export async function fetchWorkflowLogs(
 ): Promise<WorkflowLogRow[]> {
   const token = await authService.getToken();
   // Ensure the endpoint starts with /api/
-  const endpoint = `/api/sync/workflows/${workflowSlug}/recent-jobs/`; 
+  const endpoint = `/sync/workflows/${workflowSlug}/recent-jobs/`; 
 
   const response = await fetch(API_URL + endpoint, {
     headers: {
@@ -223,8 +221,7 @@ export async function triggerWorkflowRun(
 ): Promise<SyncJob> {
   const token = await authService.getToken();
   // Ensure the endpoint starts with /api/
-  const endpoint = `/api/sync/workflows/${workflowSlug}/trigger/`; 
-
+  const endpoint = `/sync/workflows/${workflowSlug}/trigger/`; 
   const response = await fetch(API_URL + endpoint, {
     method: "POST",
     headers: {

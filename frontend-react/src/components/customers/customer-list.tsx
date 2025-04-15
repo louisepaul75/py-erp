@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation"; // Added for navigation
 import Link from "next/link"; // Added for links
@@ -19,15 +20,19 @@ import {
   TableBody,
   TableCell,
 } from "@/components/ui/table";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 // Added Avatar components
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-// Updated icons: removed Eye, kept PlusCircle, Edit
-import { PlusCircle, Edit, Search } from "lucide-react";
+// Updated icons: removed Eye, kept PlusCircle, Edit, Filter
+// Add ArrowUpDown for sorting
+import { PlusCircle, Edit, Search, Filter, ArrowUpDown, X } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 // Assume formatDate exists or create a basic one if needed
 import { formatDate } from "@/lib/utils";
+import { cn } from "@/lib/utils"; // Added for class names
+// Import the hook
+import { useDataTable } from "@/hooks/useDataTable";
 
 // Basic currency formatter (similar to draft)
 const formatCurrency = (value: number | undefined | null) => {
@@ -38,12 +43,15 @@ const formatCurrency = (value: number | undefined | null) => {
     }).format(value);
 };
 
+// Define Props for CustomerList
+interface CustomerListProps {
+  onSelectCustomer: (id: string | number) => void;
+  selectedCustomerId: string | null;
+}
 
-export default function CustomerList() {
+export default function CustomerList({ onSelectCustomer, selectedCustomerId }: CustomerListProps) {
   const router = useRouter(); // Added router hook
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // Add state for other filters if implemented, e.g.:
@@ -54,7 +62,6 @@ export default function CustomerList() {
       setIsLoading(true);
       setError(null);
       setCustomers([]);
-      setFilteredCustomers([]);
 
       try {
         const token = await authService.getToken();
@@ -105,7 +112,6 @@ export default function CustomerList() {
         }));
 
         setCustomers(validCustomers);
-        setFilteredCustomers(validCustomers);
 
       } catch (err) {
         console.error("Error fetching customers:", err);
@@ -118,36 +124,27 @@ export default function CustomerList() {
     fetchCustomers();
   }, []);
 
-  // Effect for client-side filtering
-  useEffect(() => {
-    let filtered = [...customers];
-    const lowerSearchTerm = searchTerm.toLowerCase();
-
-    if (lowerSearchTerm) {
-      filtered = filtered.filter((customer) => {
-          const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.toLowerCase();
-          const companyName = (customer.companyName || '').toLowerCase();
-          // Combine searchable fields
-          return (
-            customer.customer_number.toLowerCase().includes(lowerSearchTerm) ||
-            (customer.isCompany ? companyName.includes(lowerSearchTerm) : fullName.includes(lowerSearchTerm)) ||
-            (customer.vat_id && customer.vat_id.toLowerCase().includes(lowerSearchTerm)) ||
-            (customer.emailMain && customer.emailMain.toLowerCase().includes(lowerSearchTerm)) ||
-            (customer.phoneMain && customer.phoneMain.toLowerCase().includes(lowerSearchTerm))
-          );
-        }
-      );
-    }
-
-    // Add other client-side filters here if needed
-    // Example:
-    // if (filterHasOrders) {
-    //   filtered = filtered.filter(customer => (customer.orderCount || 0) > 0);
-    // }
-
-    setFilteredCustomers(filtered);
-  }, [customers, searchTerm /*, filterHasOrders */]);
-
+  // Use the data table hook
+  const { 
+    processedData: customerList, // Renamed for clarity
+    sortConfig,
+    requestSort,
+    searchTerm,
+    setSearchTerm 
+  } = useDataTable<Customer>({
+    initialData: customers, // Use the fetched customers
+    initialSortKey: 'name', // Default sort by name
+    searchableFields: [ // Define fields for the hook to search
+      'customer_number',
+      'name',
+      'firstName',
+      'lastName',
+      'companyName',
+      'emailMain',
+      'phoneMain',
+      'vat_id'
+    ]
+  });
 
   // Updated action handlers
   const handleEditCustomer = (id: number | string) => {
@@ -162,68 +159,120 @@ export default function CustomerList() {
 
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-primary">Customers</h1>
-         <Button onClick={handleCreateCustomer}>
-           <PlusCircle className="mr-2 h-4 w-4" /> New Customer
-         </Button>
-      </div>
-
-        {error && (
-          <Alert variant="destructive">
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-      <Card>
-        <CardHeader>
-           {/* Filters Section - Basic Search */}
-           <div className="flex items-center gap-4">
-             <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by No., Name, VAT, Email, Phone..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8 w-full" // Use pl-8 for icon padding
-                />
-             </div>
-             {/* Add other filters here e.g., Checkbox for 'Has Orders' */}
-             {/* <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="has-orders"
-                  checked={filterHasOrders}
-                  onCheckedChange={(checked) => setFilterHasOrders(Boolean(checked))}
-                />
-                <Label htmlFor="has-orders">Has Orders</Label>
-              </div> */}
-           </div>
-        </CardHeader>
-        <CardContent>
+    <div className="flex flex-col h-full overflow-hidden">
+      <CardHeader>
+        <CardTitle>Customer List</CardTitle>
+        <div className="flex items-center justify-between mt-2 space-x-2">
+          <div className="relative flex-grow">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            {/* Connect Input to hook's state */}
+            <Input
+              type="search"
+              placeholder="Search No., Name, VAT, Email..."
+              value={searchTerm} // Use hook's searchTerm
+              onChange={(e) => setSearchTerm(e.target.value)} // Use hook's setSearchTerm
+              className="pl-10 h-9 w-full"
+              disabled={isLoading}
+            />
+             {/* Add clear button for search */}
+             {searchTerm && (
+               <Button
+                 variant="ghost"
+                 size="icon"
+                 className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full text-muted-foreground hover:text-foreground"
+                 onClick={() => setSearchTerm('')}
+                 disabled={isLoading}
+               >
+                 <X className="h-3 w-3" />
+               </Button>
+             )}
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Filter Customers"
+            onClick={() => alert('Filter button clicked - Implement filter logic')}
+            disabled={isLoading}
+          >
+            <Filter className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-grow flex flex-col overflow-hidden min-h-0">
+        <div className="flex-1 overflow-y-auto h-full scrollbar-thin max-md:scrollbar md:scrollbar-none">
+          {error && (
+            <Alert variant="destructive" className="my-4">
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
           {isLoading ? (
              <div className="space-y-4">
                <Skeleton className="h-10 w-full" />
                <Skeleton className="h-10 w-full" />
                <Skeleton className="h-10 w-full" />
             </div>
-          ) : filteredCustomers.length > 0 ? (
+          ) : customerList.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  {/* Updated Headers */}
-                  <TableHead>Name</TableHead>
-                  <TableHead className="hidden md:table-cell">Email</TableHead>
+                  {/* Name Header - Make sortable */}
+                  <TableHead>
+                     <Button variant="ghost" onClick={() => requestSort('name')} className="px-0 hover:bg-transparent">
+                       Name
+                        {sortConfig.key === 'name' && (
+                         <ArrowUpDown className={`ml-2 h-3 w-3 ${sortConfig.direction === 'asc' ? '' : 'rotate-180'}`} />
+                        )}
+                        {sortConfig.key !== 'name' && <ArrowUpDown className="ml-2 h-3 w-3 opacity-30" />}
+                     </Button>
+                  </TableHead>
+                  {/* Email Header - Make sortable */}
+                  <TableHead className="hidden md:table-cell">
+                     <Button variant="ghost" onClick={() => requestSort('emailMain')} className="px-0 hover:bg-transparent">
+                       Email
+                        {sortConfig.key === 'emailMain' && (
+                         <ArrowUpDown className={`ml-2 h-3 w-3 ${sortConfig.direction === 'asc' ? '' : 'rotate-180'}`} />
+                        )}
+                        {sortConfig.key !== 'emailMain' && <ArrowUpDown className="ml-2 h-3 w-3 opacity-30" />}
+                     </Button>
+                  </TableHead>
+                  {/* Phone Header - Non-sortable (example) */}
                   <TableHead className="hidden md:table-cell">Phone</TableHead>
-                  <TableHead className="hidden sm:table-cell">Orders</TableHead>
-                  <TableHead className="hidden lg:table-cell">Since</TableHead>
-                  <TableHead className="hidden lg:table-cell text-right">Total Spent</TableHead>
+                  {/* Orders Header - Make sortable */}
+                  <TableHead className="hidden sm:table-cell">
+                     <Button variant="ghost" onClick={() => requestSort('orderCount')} className="px-0 hover:bg-transparent">
+                       Orders
+                        {sortConfig.key === 'orderCount' && (
+                         <ArrowUpDown className={`ml-2 h-3 w-3 ${sortConfig.direction === 'asc' ? '' : 'rotate-180'}`} />
+                        )}
+                        {sortConfig.key !== 'orderCount' && <ArrowUpDown className="ml-2 h-3 w-3 opacity-30" />}
+                     </Button>
+                  </TableHead>
+                  {/* Since Header - Make sortable */}
+                  <TableHead className="hidden lg:table-cell">
+                     <Button variant="ghost" onClick={() => requestSort('since')} className="px-0 hover:bg-transparent">
+                       Since
+                        {sortConfig.key === 'since' && (
+                         <ArrowUpDown className={`ml-2 h-3 w-3 ${sortConfig.direction === 'asc' ? '' : 'rotate-180'}`} />
+                        )}
+                        {sortConfig.key !== 'since' && <ArrowUpDown className="ml-2 h-3 w-3 opacity-30" />}
+                     </Button>
+                  </TableHead>
+                  {/* Total Spent Header - Make sortable */}
+                  <TableHead className="hidden lg:table-cell text-right">
+                     <Button variant="ghost" onClick={() => requestSort('totalSpent')} className="px-0 hover:bg-transparent justify-end w-full">
+                       Total Spent
+                        {sortConfig.key === 'totalSpent' && (
+                         <ArrowUpDown className={`ml-2 h-3 w-3 ${sortConfig.direction === 'asc' ? '' : 'rotate-180'}`} />
+                        )}
+                        {sortConfig.key !== 'totalSpent' && <ArrowUpDown className="ml-2 h-3 w-3 opacity-30" />}
+                     </Button>
+                  </TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCustomers.map((customer) => {
+                {customerList.map((customer) => {
                     const customerName = customer.isCompany
                         ? customer.companyName
                         : `${customer.firstName || ''} ${customer.lastName || ''}`;
@@ -232,32 +281,36 @@ export default function CustomerList() {
                         : `${(customer.firstName || 'U')[0]}${(customer.lastName || 'N')[0]}`).toUpperCase();
 
                     return (
-                        <TableRow key={customer.id}>
-                            {/* Name Cell with Link - Avatar Removed */}
+                        <TableRow
+                           key={customer.id}
+                           onClick={() => onSelectCustomer(customer.id)}
+                           className={cn(
+                             "cursor-pointer",
+                             String(customer.id) === selectedCustomerId ? 'bg-muted' : ''
+                           )}
+                           >
                             <TableCell>
-                            <Link href={`/sales/customers/${customer.id}`} className="group"> {/* Removed flex items-center gap-3 */}
-                                {/* Avatar component removed */}
-                                <span className="font-medium group-hover:text-primary group-hover:underline transition-colors">
-                                    {customer.name || 'N/A'} {/* Display customer.name directly */}
-                                    <p className="text-xs text-muted-foreground font-normal block sm:hidden">{customer.customer_number}</p> {/* Show number on small screens */}
+                                <span className="font-medium">
+                                    {customer.name || 'N/A'}
+                                    <p className="text-xs text-muted-foreground font-normal block sm:hidden">{customer.customer_number}</p>
                                 </span>
-                            </Link>
                             </TableCell>
-                            {/* Other Data Cells */}
                             <TableCell className="hidden md:table-cell">{customer.emailMain}</TableCell>
                             <TableCell className="hidden md:table-cell">{customer.phoneMain}</TableCell>
                             <TableCell className="hidden sm:table-cell text-center">{customer.orderCount}</TableCell>
                             <TableCell className="hidden lg:table-cell">{formatDate(customer.since)}</TableCell>
                             <TableCell className="hidden lg:table-cell text-right">{formatCurrency(customer.totalSpent)}</TableCell>
-                            {/* Actions Cell */}
                             <TableCell>
                             <div className="flex gap-1 justify-end">
-                                {/* Edit Button */}
-                                <Button variant="ghost" size="sm" onClick={() => handleEditCustomer(customer.id)}>
+                                <Button variant="ghost" size="sm"
+                                   onClick={(e) => {
+                                       e.stopPropagation();
+                                       handleEditCustomer(customer.id);
+                                   }}
+                                   >
                                     <Edit className="h-4 w-4" />
                                     <span className="sr-only">Edit Customer</span>
                                 </Button>
-                                {/* Removed View Button */}
                             </div>
                             </TableCell>
                         </TableRow>
@@ -270,11 +323,14 @@ export default function CustomerList() {
                No customers found{searchTerm ? " matching your search" : ""}.
              </div>
            )}
-
-           {/* Add Pagination controls here if implemented */}
-
-        </CardContent>
-      </Card>
+        </div>
+      </CardContent>
+      <div className="p-4 border-t flex-shrink-0">
+        <Button className="w-full" onClick={handleCreateCustomer}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          New Customer
+        </Button>
+      </div>
     </div>
   );
 } 

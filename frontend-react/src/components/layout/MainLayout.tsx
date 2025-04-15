@@ -37,6 +37,7 @@ import { SearchResultsDropdown } from "@/components/ui/search-results-dropdown"
 import { useState, useEffect } from 'react'
 import { useLastVisited } from '@/context/LastVisitedContext'
 import { Toaster } from '@/components/ui/toaster'
+import * as React from 'react'
 
 // Custom sidebar toggle that's always visible
 const AlwaysVisibleSidebarToggle = () => {
@@ -368,9 +369,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const isDashboard = pathname === '/dashboard'
 
   return (
-    <div className="bg-background flex flex-col flex-1">
+    <div className="bg-background h-full flex flex-col flex-1 ">
       <Navbar />
-      <div className="flex flex-1">
+      <div className="flex flex-1"> 
         <SidebarProvider defaultOpen={isDashboard}>
           <MainLayoutContent>
             {children}
@@ -389,8 +390,7 @@ const MainLayoutContent = ({ children }: { children: React.ReactNode }) => {
   // const isCollapsed = state === "collapsed"
   
   return (
-    // Remove relative
-    <div className="w-full flex">
+    <div className="w-full flex flex-1"> 
       {/* Layer 3: Sidebar (as a flex item) */}
       <SidebarContents />
       
@@ -399,11 +399,12 @@ const MainLayoutContent = ({ children }: { children: React.ReactNode }) => {
       
       {/* Layer 4: Main content (as the expanding flex item) */}
       <main 
-        className="flex-1 pt-16 p-6 bg-background overflow-auto" 
+        className="flex-1 bg-background flex flex-col"
         style={{ /* Style prop is now empty */ }}
       >
-        <div className="mx-auto max-w-[1400px]">
-          {children}
+        {/* Apply specific padding AND make it fill height */}
+        <div className="mx-auto max-w-[1400px] md:max-h-[95vh] w-full pt-20  flex flex-col flex-1 ">
+          {children} 
         </div>
       </main>
     </div>

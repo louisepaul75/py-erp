@@ -89,6 +89,10 @@ urlpatterns = [
     # --- API URLs consolidated into pyerp.api_urls ---
     path("api/", include("pyerp.api_urls")), 
     
+    # --- Include standard app URLs ---
+    path("sales/", include(("pyerp.business_modules.sales.urls", "sales"), namespace="sales")),
+    # Add other standard app includes here, e.g., products
+    
     # --- Other non-API, non-i18n patterns remain ---
     # Serve Next.js built files - adjusted for Docker environment
     re_path(r'^_next/static/(?P<path>.*)$', serve, {
