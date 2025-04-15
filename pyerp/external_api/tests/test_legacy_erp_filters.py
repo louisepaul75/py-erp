@@ -209,7 +209,8 @@ class LegacyERPFilterTests(unittest.TestCase):
                 ),
             )
         else:
-            # If df is empty, the assertion fails unless expected list is also empty
+            # If df is empty, the assertion fails unless expected
+            # list is also empty
             self.assertListEqual(
                 [],
                 expected_ids_list,
