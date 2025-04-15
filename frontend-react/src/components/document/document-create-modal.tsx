@@ -169,7 +169,7 @@ export function DocumentCreateModal({ open, onOpenChange }: DocumentCreateModalP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="w-[90%] max-w-6xl">
         <DialogHeader>
           <DialogTitle>Create New Document</DialogTitle>
           <DialogDescription>

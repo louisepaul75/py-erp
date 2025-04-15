@@ -9,7 +9,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Search, Loader2, ImageIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useGlobalSearch, type SearchResult } from "@/hooks/useGlobalSearch"
+import { useGlobalSearch, type SearchResult, type SearchResponse } from "@/hooks/useGlobalSearch"
+import Image from 'next/image';
 
 // Artikel-Typ
 export interface Article {
@@ -23,6 +24,23 @@ export interface Article {
   inStock?: number
   quantity?: number
   category?: string
+}
+
+// Define SearchResult with optional image URL (mirroring backend change)
+interface SearchResultWithImage extends SearchResult {
+  primary_image_thumbnail_url?: string | null;
+}
+
+// Update hook usage type - Use the imported SearchResponse
+interface SearchResponseWithImage extends SearchResponse { 
+  results: {
+    customers: SearchResult[];
+    sales_records: SearchResult[];
+    parent_products: SearchResultWithImage[];
+    variant_products: SearchResultWithImage[];
+    box_slots: SearchResult[];
+    storage_locations: SearchResult[];
+  };
 }
 
 interface ArticleSearchProps {
@@ -56,7 +74,15 @@ export function ArticleSearch({
     isLoading,
     error,
     reset: resetSearch,
-  } = useGlobalSearch()
+   } = useGlobalSearch() as {
+     query: string;
+     setQuery: (newQuery: string) => void;
+     results: SearchResponseWithImage | null;
+     isLoading: boolean;
+     error: string | null;
+     reset: () => void;
+     getAllResults: () => SearchResult[]; // Assuming getAllResults exists and returns base SearchResult
+   };
 
   const [highlightedIndex, setHighlightedIndex] = useState(0)
   const inputInnerRef = useRef<HTMLInputElement>(null)
@@ -67,17 +93,18 @@ export function ArticleSearch({
 
   const filteredProducts = useMemo(() => {
     if (!results?.results) return []
+    // Cast to SearchResultWithImage when filtering
     return [
       ...(results.results.parent_products || []),
       ...(results.results.variant_products || [])
-    ].filter(p => p.type === 'parent_product' || p.type === 'variant_product')
+    ].filter(p => p.type === 'parent_product' || p.type === 'variant_product') as SearchResultWithImage[];
   }, [results])
 
   useEffect(() => {
     setHighlightedIndex(0)
   }, [filteredProducts])
 
-  const handleSelect = (product: SearchResult) => {
+  const handleSelect = (product: SearchResultWithImage) => {
     const selectedArticle: Article = {
       id: product.id.toString(),
       currentArticleNumber: product.sku || '',
@@ -265,8 +292,19 @@ export function ArticleSearch({
                       className={cn("flex flex-row items-center gap-3 py-2 cursor-pointer data-[selected=true]:bg-accent", highlightedIndex === index ? "bg-accent" : "")}
                       data-rk-value={product.id}
                     >
-                      <div className="flex-shrink-0 w-10 h-10 bg-muted rounded flex items-center justify-center">
-                        <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-shrink-0 w-10 h-10 bg-muted rounded flex items-center justify-center overflow-hidden">
+                        {product.primary_image_thumbnail_url ? (
+                          <Image
+                            src={product.primary_image_thumbnail_url}
+                            alt={product.name || product.sku || 'Product Image'}
+                            width={40}
+                            height={40}
+                            className="object-cover"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                        )}
                       </div>
                       <div className="flex-grow flex flex-col overflow-hidden">
                         <div className="flex items-baseline">
