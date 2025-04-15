@@ -10,8 +10,20 @@ from django.db.models import Model
 
 from .base import BaseLoader, LoadResult
 
+# Configure logger for this module
+logger = logging.getLogger("pyerp.sync.loaders.django_model")
+logger.setLevel(logging.DEBUG) # Ensure DEBUG level is set
 
-logger = logging.getLogger(__name__)
+# Add console handler if not already present (to ensure output)
+if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter("%(name)s - %(levelname)s - %(message)s")
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+    logger.propagate = False # Prevent duplicate messages from root logger
+
+# logger = logging.getLogger(__name__)
 
 
 class DjangoModelLoader(BaseLoader):
@@ -111,26 +123,44 @@ class DjangoModelLoader(BaseLoader):
         lookup_criteria = {unique_field: record[unique_field]}
 
         # Prepare record data
-        prepared_record = record.copy()
+        final_prepared_record = {} # New dictionary to build
 
-        # Remove any fields that don't exist on the model or are auto-managed
+        # Filter record to include only valid model fields
         model_class = self._get_model_class()
         model_fields = {f.name: f for f in model_class._meta.get_fields()}
+        logger.debug(f"[prepare_record] Model fields for {model_class.__name__}: {list(model_fields.keys())}")
 
-        for field in list(prepared_record.keys()):
-            # Skip if field doesn't exist or is auto-managed
+        popped_fields = []
+        kept_fields = []
+
+        # Iterate over fields from the original record passed from transformer
+        for field, value in record.items():
+            # Check if field exists on the model
             if field not in model_fields:
-                prepared_record.pop(field)
+                popped_fields.append(f"{field} (Not in model)")
                 continue
 
             field_obj = model_fields[field]
-            is_pk = getattr(field_obj, "primary_key", False)  # Primary key
-            is_auto = getattr(field_obj, "auto_created", False)  # Auto-created
+            is_pk = getattr(field_obj, "primary_key", False)
+            is_auto = getattr(field_obj, "auto_created", False)
 
-            if is_pk or is_auto:
-                prepared_record.pop(field)
+            # Keep the field if it exists and is not PK or auto-managed
+            if not (is_pk or is_auto):
+                final_prepared_record[field] = value # Add to the new dictionary
+                kept_fields.append(field)
+            else:
+                popped_fields.append(f"{field} (PK or Auto)")
 
-        return lookup_criteria, prepared_record
+        # Log popped and kept fields
+        if popped_fields:
+            logger.debug(f"[prepare_record] Popped fields for {lookup_criteria}: {popped_fields}")
+        if kept_fields:
+            logger.debug(f"[prepare_record] Kept fields for {lookup_criteria}: {kept_fields}")
+        else:
+            logger.warning(f"[prepare_record] No fields kept for {lookup_criteria}")
+
+        # Return the newly constructed dictionary
+        return lookup_criteria, final_prepared_record
 
     def load_record(
         self,
@@ -159,15 +189,37 @@ class DjangoModelLoader(BaseLoader):
         try:
             with transaction.atomic():
                 # Check for existing record
+                logger.debug(f"Looking for existing {model_class.__name__} using criteria: {lookup_criteria}")
                 instance = model_class.objects.filter(**lookup_criteria).first()
+                logger.debug(f" -> Found instance: {instance is not None}")
 
                 if instance:
                     if not update_existing:
                         return None
 
                     # Update existing instance
+                    logger.debug(f"Updating existing {model_class.__name__} instance for {lookup_criteria}...")
+                    logger.debug(f" -> Received record keys for update: {list(record.keys())}") # Log keys received by load_record
+                    update_fields_list = [] # Track fields being updated
                     for field, value in record.items():
-                        setattr(instance, field, value)
+                        # Log setting price fields specifically
+                        if field in ['retail_price', 'wholesale_price', 'retail_unit', 'wholesale_unit']:
+                            logger.debug(f" -> Attempting to set {field} = {value} (type: {type(value).__name__})")
+                        
+                        # Only update if the value has actually changed to avoid unnecessary DB hits
+                        # Although this might mask issues if the value is None and should be set
+                        # Let's temporarily update all fields from the record for debugging
+                        current_value = getattr(instance, field, None)
+                        if current_value != value:
+                            setattr(instance, field, value)
+                            update_fields_list.append(field)
+                        
+                    # Log fields intended for update
+                    if update_fields_list:
+                        logger.debug(f" -> Fields marked for update: {update_fields_list}")
+                    else:
+                        logger.debug(" -> No fields marked for update.")
+
                 else:
                     if not create_new:
                         return None
@@ -200,11 +252,31 @@ class DjangoModelLoader(BaseLoader):
 
                 # Validate and save
                 try:
-                    instance.full_clean()
+                    # Pass update_fields to save() if we were tracking changes
+                    if instance and update_fields_list:
+                       instance.full_clean()
+                       instance.save(update_fields=update_fields_list)
+                       logger.debug(f" -> Saved instance with update_fields: {update_fields_list}")
+                    elif instance: # Existing instance, but no fields changed in this update
+                       logger.debug(" -> No fields changed in this update, skipping save.")
+                    else: # New instance being created
+                       instance.full_clean()
+                       instance.save()
+                       logger.debug(f" -> Saved new instance.")
+                    
+                    # # Simplified save for debugging (REMOVE/COMMENT THIS):
+                    # instance.full_clean()
+                    # instance.save()
+                    # logger.debug(f" -> Called instance.save() for {lookup_criteria}")
+                    
                 except DjangoValidationError as e:
-                    raise ValueError(f"Validation failed: {e}") from e
+                    # Log validation errors more explicitly
+                    logger.error(f"Validation failed for {model_class.__name__} with criteria {lookup_criteria}: {e.message_dict}", exc_info=True)
+                    raise ValueError(f"Validation failed: {e.message_dict}") from e
+                except Exception as save_e:
+                    logger.error(f"Error saving {model_class.__name__} with criteria {lookup_criteria}: {save_e}", exc_info=True)
+                    raise ValueError(f"Failed to save record: {save_e}") from save_e
 
-                instance.save()
                 return instance
 
         except Exception as e:
