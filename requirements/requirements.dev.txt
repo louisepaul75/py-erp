@@ -61,7 +61,7 @@ build==1.2.2.post1
     # via pip-tools
 bytecode==0.16.1
     # via ddtrace
-celery==5.4.0
+celery==5.5.1
     # via
     #   -r requirements/requirements.prod.in
     #   django-celery-beat
@@ -730,7 +730,6 @@ typing-inspection==0.4.0
     # via pydantic
 tzdata==2025.2
     # via
-    #   celery
     #   django-celery-beat
     #   faker
     #   kombu
