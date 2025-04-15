@@ -2,12 +2,12 @@
 
 import requests
 import logging
-import json # Added for handling order parameter
+import json  # Added for handling order parameter
 from requests.auth import HTTPBasicAuth
 
 from django.conf import settings
 
-from .exceptions import (
+from pyerp.external_api.buchhaltungsbutler.exceptions import (
     BuchhaltungsButlerError,
     AuthenticationError,
     APIRequestError,
@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_BASE_URL = "https://app.buchhaltungsbutler.de/api/v1/"
 # TODO: Implement more robust rate limiting if needed
 # API allows 100 requests per customer per minute.
+
 
 class BuchhaltungsButlerClient:
     """Client for interacting with the BuchhaltungsButler API."""
@@ -42,7 +43,9 @@ class BuchhaltungsButlerClient:
 
         self.auth = HTTPBasicAuth(self.api_client, self.api_secret)
 
-    def _request(self, method, endpoint, params=None, data=None, json_payload=None):
+    def _request(
+        self, method, endpoint, params=None, data=None, json_payload=None
+    ):
         """Makes a request to the BuchhaltungsButler API."""
         url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
 
@@ -52,13 +55,12 @@ class BuchhaltungsButlerClient:
             # Add api_key to data payload for POST/PUT/PATCH
             request_data['api_key'] = self.customer_api_key
         elif params:
-             # Add api_key to query params for GET/DELETE if not already present
-             if 'api_key' not in params:
-                 params['api_key'] = self.customer_api_key
+            # Add api_key to query params for GET/DELETE if not already present
+            if 'api_key' not in params:
+                params['api_key'] = self.customer_api_key
         else:
-             # Add api_key to query params for GET/DELETE if no other params
-             params = {'api_key': self.customer_api_key}
-
+            # Add api_key to query params for GET/DELETE if no other params
+            params = {'api_key': self.customer_api_key}
 
         headers = {
             'Accept': 'application/json',
@@ -109,7 +111,8 @@ class BuchhaltungsButlerClient:
             status = e.response.status_code
             text = e.response.text
             logger.error(
-                "HTTP error during BuchhaltungsButler API request to %s: %s - %s",
+                "HTTP error during BuchhaltungsButler API request "
+                "to %s: %s - %s",
                 url, status, text,
                 exc_info=True
             )
@@ -138,7 +141,9 @@ class BuchhaltungsButlerClient:
 
     def post(self, endpoint, data=None, json_payload=None):
         """Perform a POST request."""
-        return self._request("POST", endpoint, data=data, json_payload=json_payload)
+        return self._request(
+            "POST", endpoint, data=data, json_payload=json_payload
+        )
 
     def list_receipts(
         self,
@@ -149,7 +154,7 @@ class BuchhaltungsButlerClient:
         date_to=None,
         limit=None,
         offset=None,
-        order=None, # Expects a dict like {"field": "date", "sort": "ASC"}
+        order=None,  # Expects a dict like {"field": "date", "sort": "ASC"}
         include_offers=None,
         deleted=None,
         invoicenumber=None,
@@ -165,8 +170,9 @@ class BuchhaltungsButlerClient:
             date_to (str, optional): End date filter (YYYY-MM-DD).
             limit (int, optional): Max number of results (default 500).
             offset (int, optional): Pagination offset (default 0).
-            order (dict, optional): Sorting criteria, e.g., {'field': 'date', 'sort': 'ASC'}.
-                                     The dict will be JSON encoded.
+            order (dict, optional): Sorting criteria, e.g., {'field': 'date',
+                                    'sort': 'ASC'}. The dict will be JSON
+                                    encoded.
             include_offers (bool, optional): Include offers (default False).
             deleted (bool, optional): Include deleted receipts (default False).
             invoicenumber (str, optional): Filter by invoice number.
@@ -182,7 +188,10 @@ class BuchhaltungsButlerClient:
         endpoint = "/receipts/get"
         valid_directions = ["inbound", "outbound"]
         if list_direction not in valid_directions:
-            raise ValueError(f"Invalid list_direction: '{list_direction}'. Must be one of {valid_directions}")
+            raise ValueError(
+                f"Invalid list_direction: '{list_direction}'. "
+                f"Must be one of {valid_directions}"
+            )
 
         payload = {
             "list_direction": list_direction,
@@ -221,18 +230,30 @@ class BuchhaltungsButlerClient:
 
     # Add other methods like put, delete, patch as needed
 
+
 # Example usage (for testing/demonstration - remove later)
 if __name__ == '__main__':
     # This requires Django settings to be configured
-    # You might run this via 'python -m pyerp.external_api.buchhaltungsbutler.client'
+    # You might run this via 'python -m 
+    # pyerp.external_api.buchhaltungsbutler.client'
     # after setting up DJANGO_SETTINGS_MODULE environment variable.
     import os
-    # Ensure this points to your actual settings file
+    # Use the base settings file which handles .env loading and 1Password
     os.environ.setdefault(
-        'DJANGO_SETTINGS_MODULE', 'pyerp.config.settings.development'  # Corrected path
+        'DJANGO_SETTINGS_MODULE', 'config.settings.base'
     )
     import django
-    import sys # Import sys for exit
+    import sys  # Import sys for exit
+
+    # Need to configure Django settings explicitly when running script directly
+    try:
+        django.setup()
+    except RuntimeError as e:
+        # Handle cases where settings might already be configured 
+        # (e.g., if run via manage.py)
+        if "Settings already configured" not in str(e):
+            print(f"Error configuring Django: {e}")
+            sys.exit(1)
 
     try:
         client = BuchhaltungsButlerClient()
@@ -244,4 +265,4 @@ if __name__ == '__main__':
     except BuchhaltungsButlerError as e:
         print(f"API Error: {e}")
     except Exception as e:
-        print(f"General Error: {e}") 
+        print(f"General Error: {e}")
