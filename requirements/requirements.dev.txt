@@ -539,7 +539,7 @@ pytest==7.4.4
     #   pytest-env
     #   pytest-mock
     #   pytest-xdist
-pytest-asyncio==0.20.3
+pytest-asyncio==0.23.8
     # via -r requirements/requirements.dev.in
 pytest-cov==6.1.1
     # via -r requirements/requirements.dev.in
