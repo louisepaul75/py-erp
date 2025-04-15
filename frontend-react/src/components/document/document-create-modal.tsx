@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form" // Korrigierter Import
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -172,6 +172,9 @@ export function DocumentCreateModal({ open, onOpenChange }: DocumentCreateModalP
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Create New Document</DialogTitle>
+          <DialogDescription>
+            Fill in the details below to create a new document. Use the tabs to switch between details and items.
+          </DialogDescription>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -238,7 +241,7 @@ export function DocumentCreateModal({ open, onOpenChange }: DocumentCreateModalP
                         <FormLabel>Customer</FormLabel>
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          value={field.value}
                           disabled={isLoadingCustomers}
                         >
                           <FormControl>
