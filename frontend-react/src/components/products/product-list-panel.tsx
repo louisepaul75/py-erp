@@ -1,5 +1,5 @@
 // components/products/ProductListPane.tsx
-import React from "react";
+import React, { useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import {
   Search,
@@ -24,6 +24,7 @@ import Image from "next/image";
 import { Product, ApiResponse } from "@/components/types/product";
 import { UseQueryResult } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
+import ProductFilterDialog, { ProductFilters } from "./product-filter-dialog";
 
 // Type for sort direction
 type SortDirection = 'asc' | 'desc';
@@ -49,7 +50,16 @@ interface ProductListPaneProps {
   requestSort: (key: keyof Product) => void;
   onFilterToggle: () => void;
   filterActive: boolean;
+  filters?: ProductFilters;
+  onApplyFilters?: (filters: ProductFilters) => void;
 }
+
+// Default filters
+const initialFilters: ProductFilters = {
+  isActive: null,
+  hasVariants: null,
+  productType: "all",
+};
 
 export function ProductListPane({
   productsQuery,
@@ -66,7 +76,11 @@ export function ProductListPane({
   requestSort,
   onFilterToggle,
   filterActive,
+  filters = initialFilters,
+  onApplyFilters,
 }: ProductListPaneProps) {
+  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onSearchChange(e.target.value);
   };
@@ -80,6 +94,18 @@ export function ProductListPane({
     }
     onPaginationChange(direction);
   };
+
+  // Handle filter dialog
+  const handleOpenFilterDialog = () => {
+    setIsFilterDialogOpen(true);
+  };
+
+  const handleApplyFilters = useCallback((newFilters: ProductFilters) => {
+    if (onApplyFilters) {
+      onApplyFilters(newFilters);
+    }
+    setIsFilterDialogOpen(false);
+  }, [onApplyFilters]);
 
   // const products = productsQuery.data?.results ?? [];
   console.log ("in product list pane the products are", products)
@@ -98,6 +124,13 @@ export function ProductListPane({
     }
     return <ArrowUpDown className="ml-2 h-3 w-3 opacity-30" />;
   };
+
+  // Determine if any filters are active
+  const hasActiveFilters = filters && (
+    filters.isActive !== null || 
+    filters.hasVariants !== null || 
+    filters.productType !== "all"
+  );
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -128,12 +161,12 @@ export function ProductListPane({
             )}
           </div>
           <Button
-            variant={filterActive ? "default" : "outline"}
+            variant={hasActiveFilters ? "default" : "outline"}
             size="icon"
-            aria-label="Filter Active Products"
-            onClick={onFilterToggle}
+            aria-label="Filter Products"
+            onClick={handleOpenFilterDialog}
             disabled={productsQuery.isFetching || isEditing}
-            title={filterActive ? "Showing active products only" : "Showing all products"}
+            title={hasActiveFilters ? "Filters active" : "Filter products"}
           >
             <Filter className="h-4 w-4" />
           </Button>
@@ -301,6 +334,14 @@ export function ProductListPane({
           New Product
         </Button>
       </div>
+
+      {/* Filter Dialog */}
+      <ProductFilterDialog
+        isOpen={isFilterDialogOpen}
+        onClose={() => setIsFilterDialogOpen(false)}
+        onApplyFilters={handleApplyFilters}
+        initialFilters={filters || initialFilters}
+      />
     </div>
   );
 }
