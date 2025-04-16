@@ -29,12 +29,29 @@ class SalesRecordTransformer(BaseTransformer):
     def transform(self, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Transform sales record data."""
         transformed_data = []
-        # Ensure necessary lookups are configured
-        if "customer" not in self.config.get("lookups", {}):
-            logger.error("Customer lookup configuration is missing")
+        
+        # Check if the intended method is for line items 
+        # (doesn't need customer lookup)
+        is_line_item_transform = (
+            self.config.get("transform_method") == "transform_line_items"
+        )
+        
+        # Ensure necessary lookups are configured ONLY if not transforming 
+        # line items
+        if not is_line_item_transform and \
+           "customer" not in self.config.get("lookups", {}):
+            logger.error(
+                "Customer lookup configuration is missing and required for "
+                "parent record transform"
+            )
             # Optionally raise an error or handle appropriately
             return []
 
+        # If configured for line items, call that method directly
+        if is_line_item_transform:
+            return self.transform_line_items(data)
+        
+        # Otherwise, proceed with transforming parent records
         for record in data:
             # Log key details of the record being processed
             legacy_id = record.get("AbsNr", "N/A")
@@ -58,7 +75,8 @@ class SalesRecordTransformer(BaseTransformer):
                 )
                 # Depending on requirements, you might skip this record,
                 # add error details, or halt the process.
-                # Here, we skip the record by not adding it to transformed_data.
+                # Here, we skip the record by not adding it to 
+                # transformed_data.
 
         logger.info(
             f"Transformation complete for {len(data)} records. "
@@ -66,7 +84,9 @@ class SalesRecordTransformer(BaseTransformer):
         )
         return transformed_data
 
-    def _transform_single_record(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _transform_single_record(
+        self, data: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
         """
         Transform a single sales record from legacy format.
 

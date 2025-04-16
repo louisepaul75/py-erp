@@ -159,6 +159,7 @@ class LegacyAPIExtractor(BaseExtractor):
 
             # --- Build final filter_query --- 
             final_filter_query = []
+            has_parent_filter = bool(parent_filter) # Check if parent filter exists
 
             # 1. Get base filter from query_params["filter_query"]
             base_filter = query_params.get("filter_query")
@@ -175,20 +176,23 @@ class LegacyAPIExtractor(BaseExtractor):
             if parent_filter:
                 final_filter_query.extend(parent_filter)
 
-            # 3. Add date filters
-            for date_key in self.KNOWN_DATE_KEYS:
-                if date_key in query_params and isinstance(query_params[date_key], dict):
-                    date_filter_dict = query_params[date_key]
-                    date_conditions = self._build_date_filter_query(
-                        date_key, date_filter_dict
-                    )
-                    if date_conditions:
-                        logger.info(
-                            f"Adding date filter for key '{date_key}': "
-                            f"{date_conditions}"
+            # 3. Add date filters ONLY IF no parent filter is applied
+            if not has_parent_filter:
+                for date_key in self.KNOWN_DATE_KEYS:
+                    if date_key in query_params and isinstance(query_params[date_key], dict):
+                        date_filter_dict = query_params[date_key]
+                        date_conditions = self._build_date_filter_query(
+                            date_key, date_filter_dict
                         )
-                        final_filter_query.extend(date_conditions)
-                    break  # Assume only one date filter key is used per query
+                        if date_conditions:
+                            logger.info(
+                                f"Adding date filter for key '{date_key}': "
+                                f"{date_conditions}"
+                            )
+                            final_filter_query.extend(date_conditions)
+                        break  # Assume only one date filter key is used per query
+            else:
+                logger.info("Skipping date filters as parent ID filter is active.")
 
             # Determine pagination settings
             top = query_params.get("$top")  # Can be None
@@ -274,6 +278,8 @@ class LegacyAPIExtractor(BaseExtractor):
         # --- Build base filter query (excluding pagination params) ---
         # Reuse filter building logic but apply it once before looping
         final_filter_query = []
+        has_parent_filter_batched = False # Check if parent filter exists
+
         # 1. Get base filter from query_params["filter_query"]
         base_filter = query_params.get("filter_query")
         if base_filter:
@@ -298,22 +304,23 @@ class LegacyAPIExtractor(BaseExtractor):
             # The API client or endpoint needs to handle potentially large 'OR' conditions.
             # Consider if this filter type is compatible with efficient batching.
             final_filter_query.extend(parent_filter_part)
+            has_parent_filter_batched = True # Set flag if parent filter is added
 
-        # 3. Add date filters
-        for date_key in self.KNOWN_DATE_KEYS:
-            # Allow multiple date keys if they are in query_params and KNOWN_DATE_KEYS
-            if date_key in query_params and isinstance(query_params[date_key], dict):
-                date_filter_dict = query_params[date_key]
-                date_conditions = self._build_date_filter_query(
-                    date_key, date_filter_dict
-                )
-                if date_conditions:
-                    logger.info(
-                        f"Adding date filter for key '{date_key}' (batched): {date_conditions}"
+        # 3. Add date filters ONLY IF no parent filter is applied
+        if not has_parent_filter_batched:
+            for date_key in self.KNOWN_DATE_KEYS:
+                # Allow multiple date keys if they are in query_params and KNOWN_DATE_KEYS
+                if date_key in query_params and isinstance(query_params[date_key], dict):
+                    date_filter_dict = query_params[date_key]
+                    date_conditions = self._build_date_filter_query(
+                        date_key, date_filter_dict
                     )
-                    final_filter_query.extend(date_conditions)
-                # Removed break to allow multiple date filters if needed
-
+                    if date_conditions:
+                        logger.info(
+                            f"Adding date filter for key '{date_key}' (batched): {date_conditions}"
+                        )
+                        final_filter_query.extend(date_conditions)
+                    # Removed break to allow multiple date filters if needed
 
         # --- Pagination loop ---
         while True:

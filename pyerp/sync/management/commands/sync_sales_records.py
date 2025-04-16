@@ -209,9 +209,11 @@ class Command(BaseSyncCommand):
             # ----- Step 2.1: Process parent records (Belege) for this batch ----- # noqa E501
             try:
                 # Prepare filters for this batch of parent records
+                # Use the keys expected by the extractor for parent filtering
                 parent_batch_filters = {
-                    **initial_query_params,
-                    self.PARENT_LEGACY_KEY_FIELD + "__in": batch_parent_ids
+                    **initial_query_params,  # Keep initial filters like --days
+                    "parent_record_ids": batch_parent_ids,
+                    "parent_field": self.PARENT_LEGACY_KEY_FIELD
                 }
                 
                 self.stdout.write(
@@ -233,6 +235,9 @@ class Command(BaseSyncCommand):
                     f"{log_prefix} Extracted {len(parent_source_data)} parent "
                     f"records for batch {batch_index + 1}."
                 )
+                
+                # Initialize transformed_parent_data to ensure it exists
+                transformed_parent_data = []
                 
                 if parent_source_data:
                     # Transform parent records

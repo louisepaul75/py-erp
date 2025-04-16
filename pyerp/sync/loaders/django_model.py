@@ -201,6 +201,7 @@ class DjangoModelLoader(BaseLoader):
         record: Dict[str, Any],
         update_existing: bool = True,
         create_new: bool = True,
+        instance: Optional[Model] = None,
     ) -> Optional[Model]:
         """Load a single record into Django model.
 
@@ -209,6 +210,7 @@ class DjangoModelLoader(BaseLoader):
             record: Record data to load
             update_existing: Whether to update existing records
             create_new: Whether to create new records
+            instance: Pre-fetched model instance if exists, otherwise None.
 
         Returns:
             Created or updated model instance, or None if skipped
@@ -223,16 +225,6 @@ class DjangoModelLoader(BaseLoader):
 
         try:
             with transaction.atomic():
-                # Check for existing record
-                logger.debug(
-                    f"Looking for existing {model_class.__name__} "
-                    f"using criteria: {lookup_criteria}"
-                )
-                instance = model_class.objects.filter(
-                    **lookup_criteria
-                ).first()
-                logger.debug(f" -> Found instance: {instance is not None}")
-
                 if instance:
                     if not update_existing:
                         return None
@@ -284,6 +276,26 @@ class DjangoModelLoader(BaseLoader):
                     if not create_new:
                         return None
 
+                    # --- Start: Check for existing records based on unique_together constraints --- 
+                    has_constraint_conflict = False
+                    for constraint_fields in model_class._meta.unique_together:
+                        # Check if all fields for this constraint are in the record
+                        if all(f in record for f in constraint_fields):
+                            constraint_lookup = {f: record[f] for f in constraint_fields}
+                            # Check if a record exists with these constraint values
+                            if model_class.objects.filter(**constraint_lookup).exists():
+                                logger.warning(
+                                    f"Skipping creation for lookup {lookup_criteria}: "
+                                    f"A record already exists with conflicting unique constraint fields "
+                                    f"{constraint_fields} = {tuple(record[f] for f in constraint_fields)}."
+                                )
+                                has_constraint_conflict = True
+                                break # Found a conflict, no need to check other constraints
+                    
+                    if has_constraint_conflict:
+                        return None # Skip this record due to conflict
+                    # --- End: Check for existing records based on unique_together constraints ---
+
                     # Create new instance - exclude auto-managed fields
                     model_fields = {
                         f.name: f for f in model_class._meta.get_fields()
@@ -315,13 +327,22 @@ class DjangoModelLoader(BaseLoader):
                 # Validate and save
                 try:
                     # Pass update_fields to save() if we were tracking changes
-                    if instance and update_fields_list:
+                    if instance and not instance._state.adding: # Existing instance
                         instance.full_clean()
-                        instance.save(update_fields=update_fields_list)
-                        logger.debug(
-                            f" -> Saved instance with update_fields: "
-                            f"{update_fields_list}"
-                        )
+                        # Save with specific fields if they changed, otherwise save all
+                        # fields to trigger auto_now updates.
+                        if update_fields_list:
+                            instance.save(update_fields=update_fields_list)
+                            logger.debug(
+                                f" -> Saved instance with update_fields: "
+                                f"{update_fields_list}"
+                            )
+                        else:
+                             instance.save()
+                             logger.debug(
+                                f" -> No specific fields changed, saving instance "
+                                f"to update auto_now fields."
+                            )
                     elif instance and instance._state.adding:  # This is a new instance
                         instance.full_clean()
                         instance.save()
@@ -440,17 +461,22 @@ class DjangoModelLoader(BaseLoader):
         # Step 3: Process each record individually
         for unique_value, prepared_record in prepared_records:
             try:
+                # Get the pre-fetched instance from the dictionary
+                existing_instance = existing_records.get(unique_value)
                 lookup_dict = {unique_field: unique_value}
-                instance = self.load_record(
+
+                # Pass the existing_instance (or None) to load_record
+                processed_instance = self.load_record(
                     lookup_dict,
                     prepared_record,
                     update_existing=update_existing,
                     create_new=create_new,
+                    instance=existing_instance,
                 )
 
-                if instance is None:
+                if processed_instance is None:
                     result.skipped += 1
-                elif instance._state.adding:
+                elif processed_instance._state.adding:
                     result.created += 1
                 else:
                     result.updated += 1

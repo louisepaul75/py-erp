@@ -2,7 +2,13 @@ import unittest
 import pandas as pd
 from datetime import datetime, timedelta
 
-# Assuming LegacyERPClient is accessible like this. Adjust if necessary.
+# --- Load Environment Variables First ---
+# Ensure environment is set up before importing modules that need settings
+from pyerp.utils.env_loader import load_environment_variables
+load_environment_variables() # Load from default location
+# --- End Environment Loading ---
+
+# Now import modules that might depend on Django settings
 from pyerp.external_api.legacy_erp.client import LegacyERPClient
 from pyerp.external_api import connection_manager
 

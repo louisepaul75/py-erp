@@ -531,9 +531,9 @@ class PipelineFactory:
         )
 
         # Prepare configs for each component
-        extractor_config = source_config.get("config", {})
-        transformer_config = mapping_config.get("config", {})
-        loader_config = target_config.get("config", {})
+        extractor_config = source_config # Use the whole source_config
+        transformer_config = mapping_config # Pass the whole mapping_config directly
+        loader_config = target_config # Use the whole target_config
         
         # Add mapping-specific loader config if available
         loader_config.update(mapping_config.get("loader_config", {}))
