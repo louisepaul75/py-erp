@@ -9,6 +9,7 @@ from django.utils import timezone
 from pyerp.utils.logging import get_logger
 from pyerp.sync.pipeline import PipelineFactory
 from .base_sync_command import BaseSyncCommand
+from pyerp.sync.loaders.base import LoadResult
 
 
 logger = get_logger(__name__)
@@ -600,26 +601,26 @@ class Command(BaseSyncCommand):
                     )
 
                     # Load transformed parent records
-                    load_result = parent_pipeline.loader.load(
+                    parent_load_result = parent_pipeline.loader.load(
                         transformed_parent_data,
                         update_existing=(
                             options.get("force_update") or options.get("full")
                         ),
                     )
 
-                    # Update statistics
-                    parent_stats["created"] += load_result.created
-                    parent_stats["updated"] += load_result.updated
-                    parent_stats["skipped"] += load_result.skipped
-                    parent_stats["errors"] += load_result.errors
+                    # Update statistics using the new variable name
+                    parent_stats["created"] += parent_load_result.created
+                    parent_stats["updated"] += parent_load_result.updated
+                    parent_stats["skipped"] += parent_load_result.skipped
+                    parent_stats["errors"] += parent_load_result.errors
 
                     # Identify legacy IDs of parents that failed to load
                     failed_parent_legacy_ids = set()
                     unique_field = parent_pipeline.loader.config.get(
                         "unique_field", "legacy_id"
                     )
-                    if load_result.error_details:
-                        for error_detail in load_result.error_details:
+                    if parent_load_result.error_details:
+                        for error_detail in parent_load_result.error_details:
                             record_data = error_detail.get("record")
                             if record_data and unique_field in record_data:
                                 failed_parent_legacy_ids.add(
@@ -633,32 +634,33 @@ class Command(BaseSyncCommand):
                                     f"{batch_index + 1}: {error_detail}"
                                 )
 
+                    # Log parent results separately for clarity within the batch process
                     self.stdout.write(
                         self.style.SUCCESS(
                             f"{log_prefix} Parent load for batch "
                             f"{batch_index + 1} finished: "
-                            f"{load_result.created} created, "
-                            f"{load_result.updated} updated, "
-                            f"{load_result.skipped} skipped, "
-                            f"{load_result.errors} errors."
+                            f"{parent_load_result.created} created, "
+                            f"{parent_load_result.updated} updated, "
+                            f"{parent_load_result.skipped} skipped, "
+                            f"{parent_load_result.errors} errors."
                         )
                     )
 
                     # Display errors for this batch if any
-                    if load_result.error_details:
+                    if parent_load_result.error_details:
                         self.stdout.write(
                             self.style.WARNING(
                                 f"{log_prefix} Parent Load Errors in "
                                 f"batch {batch_index + 1}:"
                             )
                         )
-                        for i, err in enumerate(load_result.error_details):
+                        for i, err in enumerate(parent_load_result.error_details):
                             if i < 5:  # Show only first 5 errors per batch
                                 self.stdout.write(f"- {err}")
                             else:
                                 self.stdout.write(
                                     f"... and "
-                                    f"{len(load_result.error_details) - 5}" # noqa E501
+                                    f"{len(parent_load_result.error_details) - 5}" # noqa E501
                                     f" more errors."
                                 )
                                 break
@@ -668,6 +670,9 @@ class Command(BaseSyncCommand):
                         f"{batch_index + 1} from Step 1 data, skipping "
                         f"parent transform and load."
                     )
+                    # Ensure parent_load_result is initialized if no parent load occurs
+                    parent_load_result = LoadResult(created=0, updated=0, skipped=0, errors=0, error_details=[])
+
 
                 # ----- Step 2.2: Process child records (Belege_Pos) for this batch ----- # noqa E501
                 # Get legacy IDs from successfully transformed parent records
@@ -810,7 +815,7 @@ class Command(BaseSyncCommand):
                                 f"for batch {batch_index + 1}."
                             )
 
-                            # Load transformed child records
+                            # Load transformed child records (keeps original variable name)
                             load_result = child_pipeline.loader.load(
                                 transformed_child_data,
                                 update_existing=(
@@ -825,10 +830,16 @@ class Command(BaseSyncCommand):
                             child_stats["skipped"] += load_result.skipped
                             child_stats["errors"] += load_result.errors
 
+                            # Updated log message to include parent and child stats
                             self.stdout.write(
                                 self.style.SUCCESS(
-                                    f"{log_prefix} Child load for batch "
-                                    f"{batch_index + 1} finished: "
+                                    f"{log_prefix} Batch {batch_index + 1} finished. "
+                                    f"Parents: "
+                                    f"{parent_load_result.created} created, "
+                                    f"{parent_load_result.updated} updated, "
+                                    f"{parent_load_result.skipped} skipped, "
+                                    f"{parent_load_result.errors} errors. | "
+                                    f"Children: "
                                     f"{load_result.created} created, "
                                     f"{load_result.updated} updated, "
                                     f"{load_result.skipped} skipped, "
