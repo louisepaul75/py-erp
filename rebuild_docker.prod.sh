@@ -90,6 +90,7 @@ if [ "$LOCAL_HTTPS_MODE" = true ]; then
 fi
 
 echo -e "\nServices from $COMPOSE_FILE are running in the background. Use 'docker-compose -f $COMPOSE_FILE logs' to view logs."
+echo -e "Zebra Day service (zebra-day) is expected to be running as part of the main services."
 
 # --- Check Database Connection Source ---
 echo -e "\n--- Verifying Database Connection Source in pyerp Logs ---"

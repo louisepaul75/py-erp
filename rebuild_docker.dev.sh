@@ -4,6 +4,7 @@
 RUN_TESTS=""
 USE_CACHE="yes"
 START_MONITORING="no" # Default to not starting monitoring services
+START_ZEBRA="no"      # Default to not starting local zebra-day service
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -24,9 +25,13 @@ while [[ $# -gt 0 ]]; do
             START_MONITORING="yes"
             shift
             ;;
+        --with-zebra) # Flag to explicitly start local zebra-day service
+            START_ZEBRA="yes"
+            shift
+            ;;
         *)
             echo "Unknown parameter: $1"
-            echo "Usage: $0 [--tests ui] [--no-cache] [--with-monitoring]"
+            echo "Usage: $0 [--tests ui] [--no-cache] [--with-monitoring] [--with-zebra]"
             exit 1
             ;;
     esac
@@ -67,12 +72,20 @@ echo "Cleaning host logs directory..."
 rm -rf ./logs/*
 
 # Determine which services to start
-SERVICES_TO_START="pyerp-app zebra-day"
+SERVICES_TO_START="pyerp-app" # pyerp-app is always needed
 if [ "$START_MONITORING" == "yes" ]; then
     echo "Monitoring services will be started (--with-monitoring flag detected)."
     SERVICES_TO_START="$SERVICES_TO_START pyerp-elastic-kibana"
 else
     echo "Monitoring services will NOT be started (use --with-monitoring to include them)."
+fi
+
+if [ "$START_ZEBRA" == "yes" ]; then
+    echo "Local Zebra Day service will be started (--with-zebra flag detected)."
+    SERVICES_TO_START="$SERVICES_TO_START zebra-day"
+else
+    echo "Local Zebra Day service will NOT be started. Assuming connection to remote Zebra Day (e.g., 192.168.73.65)."
+    echo "(Use --with-zebra to start the local service)."
 fi
 
 # Start the selected services defined in the compose file in detached mode
@@ -183,29 +196,33 @@ else
      echo "Skipping Django health check because pyerp-app service is not running."
 fi
 
-# Check Zebra Day Service (zebra-day)
-if check_service_running zebra-day; then
-    echo "Checking Zebra Day service ($ZEBRA_URL)..."
-    ZEBRA_SUCCESS=false
-    for i in $(seq 1 $MAX_RETRIES); do
-        # Zebra day base URL might just return the UI html
-        if curl -fsS $ZEBRA_URL > /dev/null; then 
-            echo "✅ Zebra Day service is responsive."
-            ZEBRA_SUCCESS=true
-            break
+# Check Zebra Day Service (zebra-day) - Only if local start was requested
+if [ "$START_ZEBRA" == "yes" ]; then
+    if check_service_running zebra-day; then
+        echo "Checking Local Zebra Day service ($ZEBRA_URL)..."
+        ZEBRA_SUCCESS=false
+        for i in $(seq 1 $MAX_RETRIES); do
+            # Zebra day base URL might just return the UI html
+            if curl -fsS $ZEBRA_URL > /dev/null; then 
+                echo "✅ Local Zebra Day service is responsive."
+                ZEBRA_SUCCESS=true
+                break
+            fi
+            if ! check_service_running zebra-day; then
+                echo "❌ Error: Service zebra-day seems to have stopped during check."
+                break
+            fi
+            echo "Attempt $i/$MAX_RETRIES failed. Retrying in $RETRY_DELAY seconds..."
+            sleep $RETRY_DELAY
+        done
+        if [ "$ZEBRA_SUCCESS" = false ] && check_service_running zebra-day; then
+            echo "❌ Error: Local Zebra Day service failed to respond after $MAX_RETRIES attempts."
         fi
-        if ! check_service_running zebra-day; then
-            echo "❌ Error: Service zebra-day seems to have stopped during check."
-            break
-        fi
-        echo "Attempt $i/$MAX_RETRIES failed. Retrying in $RETRY_DELAY seconds..."
-        sleep $RETRY_DELAY
-    done
-    if [ "$ZEBRA_SUCCESS" = false ] && check_service_running zebra-day; then
-        echo "❌ Error: Zebra Day service failed to respond after $MAX_RETRIES attempts."
+    else
+        echo "Skipping Local Zebra Day health check because zebra-day service is not running (or failed to start)."
     fi
 else
-    echo "Skipping Zebra Day health check because zebra-day service is not running."
+    echo "Skipping Local Zebra Day health check because it was not requested to start (--with-zebra not used)."
 fi
 
 echo "--- Health Checks Complete ---"

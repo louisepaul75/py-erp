@@ -601,3 +601,104 @@ class Notification(models.Model):
                 f"{self.get_type_display()} for {self.user.username}: "
                 f"{self.title} ({read_status})"
             )
+
+
+class Device(models.Model):
+    """
+    Represents a network device, potentially a printer or other hardware.
+    """
+    class DeviceType(models.TextChoices):
+        PRINTER = 'PRINTER', _('Printer')
+        SCANNER = 'SCANNER', _('Scanner')
+        COMPUTER = 'COMPUTER', _('Computer')
+        NETWORK_GEAR = 'NETWORK_GEAR', _('Network Gear')
+        OTHER = 'OTHER', _('Other')
+
+    uuid = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        help_text=_("Unique identifier for the device"),
+    )
+    name = models.CharField(
+        max_length=255,
+        help_text=_(
+            "Human-readable name for the device (e.g., 'Lab CA Printer')"
+        ),
+    )
+    device_type = models.CharField(
+        max_length=20,
+        choices=DeviceType.choices,
+        default=DeviceType.OTHER,
+        help_text=_("Type of the device"),
+        db_index=True,
+    )
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        unique=True,  # Assuming IP should be unique for active devices
+        help_text=_("IP address of the device"),
+        db_index=True,
+    )
+    location = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text=_(
+            "Physical or logical location (e.g., 'Lab CA', 'Office Wing B')"
+        ),
+        db_index=True,
+    )
+    model = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text=_("Device model designation (e.g., 'Zebra ZD420')"),
+    )
+    serial_number = models.CharField(
+        max_length=100,
+        blank=True,
+        unique=True,  # Serial numbers should ideally be unique
+        null=True,  # Allow null if serial is unknown initially
+        help_text=_("Device serial number"),
+    )
+    label_zpl_styles = models.JSONField(
+        null=True,
+        blank=True,
+        default=list,
+        help_text=_(
+            "List of ZPL label styles supported/configured (for printers)"
+        ),
+    )
+    # Add other common fields as needed, e.g., MAC address, purchase date, etc.
+    mac_address = models.CharField(
+        max_length=17,  # XX:XX:XX:XX:XX:XX
+        blank=True,
+        null=True,
+        unique=True,
+        help_text=_("MAC address of the device"),
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text=_("Is the device currently active and in use?"),
+        db_index=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Device")
+        verbose_name_plural = _("Devices")
+        ordering = ['location', 'name']
+        indexes = [
+            models.Index(fields=['location']),
+            models.Index(fields=['device_type']),
+            models.Index(fields=['is_active']),
+            # For quicker lookups of active IPs
+            models.Index(fields=['ip_address', 'is_active']),
+        ]
+        # Consider a unique constraint if needed, e.g., (location, name)
+        # unique_together = (('location', 'name'),)
+
+    def __str__(self):
+        location_str = self.location or 'No Location'
+        ip_str = self.ip_address or 'No IP'
+        return f"{self.name} ({location_str}) - {ip_str}"

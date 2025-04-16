@@ -19,6 +19,7 @@ services:
       - ..:/app
       - node_modules_volume:/app/frontend-react/node_modules
       - filebeat_data:/var/lib/filebeat
+      - shared_data:/shared_data
     environment:
       - DJANGO_SETTINGS_MODULE=pyerp.config.settings.development
       - PYERP_ENV=development
@@ -172,6 +173,7 @@ services:
     restart: unless-stopped # Optional: Restart the service if it stops unexpectedly
     volumes:
       - zebra_day_etc:/usr/local/lib/python3.10/site-packages/zebra_day/etc
+      - shared_data:/shared_data
 
 volumes:
   pyerp_data:
@@ -179,6 +181,7 @@ volumes:
   es_data:
   node_modules_volume: {}
   zebra_day_etc: {} # Define the named volume
+  shared_data: {} # Define the new shared volume
 
 networks:
   pyerp-network:
