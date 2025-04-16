@@ -6,7 +6,6 @@ import tempfile
 from pathlib import Path
 import pandas as pd  # Import pandas
 
-import pyarrow as pa
 import pyarrow.parquet as pq
 
 from django.core.management.base import CommandError
@@ -481,215 +480,65 @@ class Command(BaseSyncCommand):
                             f"{log_prefix} Saving {len(filtered_parent_data)} parents "
                             f"to {parents_file}..."
                         )
-                        parent_table = None  # Ensure var exists for finally block
-
-                        try: # Schema determination and Parquet writing
-                            # --- Robust Schema Definition based on Data Scan ---
-                            logger.debug(f"{log_prefix} Determining schema by scanning parent data...")
-                            field_types = {}
-                            all_keys = set()
-                            if filtered_parent_data:
-                                for record in filtered_parent_data: # Scan all records
-                                    all_keys.update(record.keys())
-                            else:
-                                raise ValueError("Cannot determine schema from empty data.")
-                            
-                            # Scan data to determine types
-                            for record in filtered_parent_data: # Scan all for robustness here
-                                for key in all_keys:
-                                    value = record.get(key)
-                                    current_pa_type = field_types.get(key)
-
-                                    if value is None:
-                                        continue # Cannot infer type from None alone
-
-                                    detected_pa_type = None
-                                    if isinstance(value, datetime.datetime):
-                                        detected_pa_type = pa.timestamp('us')
-                                    elif isinstance(value, datetime.date):
-                                        detected_pa_type = pa.date32()
-                                    elif isinstance(value, bool):
-                                        detected_pa_type = pa.bool_()
-                                    elif isinstance(value, int):
-                                        detected_pa_type = pa.int64()
-                                    elif isinstance(value, float):
-                                        detected_pa_type = pa.float64()
-                                    elif isinstance(value, str):
-                                        detected_pa_type = pa.string()
-                                    elif isinstance(value, dict):
-                                        try:
-                                            if current_pa_type is None or not pa.types.is_struct(current_pa_type):
-                                                struct_table = pa.Table.from_pylist([value])
-                                                detected_pa_type = struct_table.schema.field(0).type
-                                        except Exception as struct_err:
-                                            logger.warning(f"{log_prefix} Could not infer struct type for key '{key}', defaulting to string. Error: {struct_err}")
-                                            detected_pa_type = pa.string()
-                                    
-                                    if detected_pa_type:
-                                        if current_pa_type is None:
-                                            field_types[key] = detected_pa_type
-                                        elif current_pa_type != detected_pa_type:
-                                            # Handle type conflicts (promote to more general type)
-                                            if pa.types.is_integer(current_pa_type) and pa.types.is_floating(detected_pa_type):
-                                                field_types[key] = pa.float64()
-                                            elif pa.types.is_floating(current_pa_type) and pa.types.is_integer(detected_pa_type):
-                                                pass # Keep float64
-                                            elif pa.types.is_primitive(current_pa_type) and pa.types.is_string(detected_pa_type):
-                                                 field_types[key] = pa.string() # Promote primitive to string
-                                            elif pa.types.is_string(current_pa_type) and not pa.types.is_string(detected_pa_type):
-                                                pass # Keep string if already string
-                                            elif current_pa_type == pa.date32() and detected_pa_type == pa.timestamp('us'):
-                                                 field_types[key] = pa.timestamp('us') # Promote date to timestamp
-                                            elif current_pa_type == pa.timestamp('us') and detected_pa_type == pa.date32():
-                                                 pass # Keep timestamp
-                                            # Add other conflict resolutions? Defaulting to string might be safest for unhandled mixes
-                                            elif current_pa_type != detected_pa_type and not pa.types.is_struct(current_pa_type): # Avoid struct conflicts for now
-                                                logger.warning(f"{log_prefix} Field '{key}' has unhandled mixed types: {current_pa_type} and {detected_pa_type}. Promoting to string.")
-                                                field_types[key] = pa.string()
-
-                            # Build final schema definition
-                            schema_definition = []
-                            final_field_types = {} # Store for potential later use in cleaning
-                            for key in sorted(list(all_keys)): # Sort for consistent schema order
-                                pa_type = field_types.get(key)
-                                if pa_type is None:
-                                    logger.warning(f"{log_prefix} Field '{key}' was all None or empty in scan, defaulting to null type.")
-                                    pa_type = pa.null()
-                                
-                                # Manual override for DATE_FILTER_FIELD
-                                if key == self.DATE_FILTER_FIELD and pa_type != pa.date32():
-                                    logger.warning(f"{log_prefix} Overriding schema type for '{key}' from {pa_type} to date32.")
-                                    pa_type = pa.date32()
-                                
-                                schema_definition.append(pa.field(key, pa_type))
-                                final_field_types[key] = pa_type
-
-                            final_schema = pa.schema(schema_definition)
-                            logger.info(f"{log_prefix} Determined final schema: {final_schema}")
-                            # --- End Schema Definition ---
-
-                            # --- Data Cleaning with Pandas (using previous logic for now) ---
-                            self.stdout.write(
-                                f"{log_prefix} Cleaning parent data types before saving..."
-                            )
+                        try:
+                            # --- Create Pandas DataFrame ---
                             parent_df = pd.DataFrame(filtered_parent_data)
+                            parent_record_count = len(parent_df)
 
-                            # Identify integer cols based on the *new* final_schema
-                            integer_fields_final = {
-                                field.name for field in final_schema
-                                if pa.types.is_integer(field.type)
-                            }
-                            logger.debug(f"{log_prefix} Integer fields for cleaning: {integer_fields_final}")
+                            # --- Explicitly convert problematic columns to string --- # noqa E501
+                            if 'Termin' in parent_df.columns:
+                                logger.debug("%s Converting 'Termin' column to string before saving.", log_prefix) # noqa E501
+                                # Apply conversion row-wise, handle None explicitly
+                                parent_df['Termin'] = parent_df['Termin'].apply(lambda x: x.isoformat() if isinstance(x, (datetime.datetime, datetime.date)) else str(x) if x is not None else None) # noqa E501
 
-                            # 1. Coerce top-level integer columns
-                            cleaned_count = 0
-                            for col in integer_fields_final: # Use updated list
-                                if col in parent_df.columns:
-                                    if (
-                                        parent_df[col].dtype == object or
-                                        pd.api.types.is_string_dtype(parent_df[col].dtype)
-                                    ):
-                                        logger.debug(
-                                            f"{log_prefix} Coercing int column '{col}'..."
-                                        )
-                                        original_nulls = parent_df[col].isna().sum()
-                                        parent_df[col] = pd.to_numeric(parent_df[col], errors='coerce')
-                                        if not parent_df[col].isna().all():
-                                            try:
-                                                parent_df[col] = parent_df[col].astype(pd.Int64Dtype())
-                                                coerced_nulls = parent_df[col].isna().sum()
-                                                if coerced_nulls > original_nulls:
-                                                    logger.info(f"Coerced {coerced_nulls-original_nulls} val->NA in '{col}'")
-                                                cleaned_count += 1
-                                            except Exception as astype_err:
-                                                logger.warning(f"Could not convert '{col}' to Int64: {astype_err}")
-
-                            if cleaned_count > 0:
-                                logger.info(f"Applied coercion to {cleaned_count} int columns.")
-                            else:
-                                logger.debug(f"No top-level int coercion needed.")
-
-                            # 2. Clean nested Waehrungsinfo.Kurs
-                            if WAEHRUNGSINFO_FIELD in parent_df.columns:
-                                logger.debug(f"Cleaning nested '{WAEHRUNGSINFO_FIELD}.{KURS_FIELD}'")
-                                def clean_kurs(info_dict):
-                                    # (Using the existing clean_kurs function logic)
-                                    if not isinstance(info_dict, dict): return info_dict
-                                    new_info_dict = info_dict.copy()
-                                    kurs_val = new_info_dict.get(KURS_FIELD)
-                                    kurs_changed = False
-                                    if kurs_val is None or isinstance(kurs_val, int): pass
-                                    elif isinstance(kurs_val, float):
-                                        if kurs_val.is_integer(): new_info_dict[KURS_FIELD] = int(kurs_val); kurs_changed = True
-                                        else: new_info_dict[KURS_FIELD] = None; kurs_changed = True
-                                    elif isinstance(kurs_val, str):
-                                        try:
-                                            cleaned_val = int(kurs_val) if kurs_val.strip() else None
-                                            if kurs_val != cleaned_val: new_info_dict[KURS_FIELD] = cleaned_val; kurs_changed = True
-                                        except (ValueError, TypeError): new_info_dict[KURS_FIELD] = None; kurs_changed = True
-                                    else: new_info_dict[KURS_FIELD] = None; kurs_changed = True
-                                    return new_info_dict if kurs_changed else info_dict
-                                parent_df[WAEHRUNGSINFO_FIELD] = parent_df[WAEHRUNGSINFO_FIELD].apply(clean_kurs)
-                                logger.info(f"Finished cleaning nested '{WAEHRUNGSINFO_FIELD}.{KURS_FIELD}'")
-
-                            # 3. Convert DataFrame back to list of dicts
-                            cleaned_parent_data = parent_df.where(pd.notna(parent_df), None).to_dict('records')
-                            parent_df = None  # Free memory
-                            # --- End Data Cleaning ---
-
-                            # --- Create Arrow Table with Explicit Schema ---
-                            logger.debug(f"{log_prefix} Creating pyarrow Table (inferring schema)...")
-                            parent_table = pa.Table.from_pylist(
-                                cleaned_parent_data, # Let PyArrow infer schema now
-                                safe=False # DIAGNOSTIC: Disable safety checks
+                            # --- Write Pandas DataFrame to Parquet ---
+                            logger.info(
+                                "%s Writing parent DataFrame to %s...",
+                                log_prefix, parents_file
                             )
-                            inferred_schema = parent_table.schema
-                            logger.info(f"{log_prefix} Inferred schema (safe=False): {inferred_schema}") # Log info
+                            parent_df.to_parquet(parents_file, index=False)
+                            logger.info("%s Parent data saved to Parquet.", log_prefix) # noqa E501
 
-                            # --- Cast specific columns AFTER inference ---
-                            # --- Write Arrow Table ---
-                            logger.debug(
-                                f"{log_prefix} Writing final parent table to {parents_file}..."
-                            )
-                            pq.write_table(parent_table, parents_file)
-                            parent_record_count = len(cleaned_parent_data)
-                            # --- End Write Table ---
-
-                            # Extract IDs after saving
-                            for record in cleaned_parent_data:
-                                record_id = record.get(
-                                    self.PARENT_LEGACY_KEY_FIELD
+                            # Extract IDs after saving (using DataFrame)
+                            if self.PARENT_LEGACY_KEY_FIELD in parent_df.columns: # noqa E501
+                                parent_ids_to_fetch_children_for = set(
+                                    parent_df[self.PARENT_LEGACY_KEY_FIELD].dropna().astype(str).unique() # noqa E501
                                 )
-                                if record_id is not None:
-                                    parent_ids_to_fetch_children_for.add(
-                                        str(record_id)
-                                    )
+                            else:
+                                logger.warning(
+                                    "%s Parent legacy key field '%s' not found " # noqa E501
+                                    "in DataFrame columns. Cannot fetch children.", # noqa E501
+                                    log_prefix, self.PARENT_LEGACY_KEY_FIELD
+                                )
+                                parent_ids_to_fetch_children_for = set()
+
                             self.stdout.write(
-                                f"{log_prefix} Saved {parent_record_count} parents. "
-                                f"Found {len(parent_ids_to_fetch_children_for)} unique IDs."
+                                f"{log_prefix} Saved {parent_record_count} "
+                                f"parents. Found "
+                                f"{len(parent_ids_to_fetch_children_for)} "
+                                f"unique parent IDs."
                             )
                             logger.info(
-                                f"{log_prefix} Saved {parent_record_count} parents to "
-                                f"Parquet. Found "
-                                f"{len(parent_ids_to_fetch_children_for)} unique IDs."
+                                "%s Saved %d parents to Parquet. Found %d "
+                                "unique IDs.", log_prefix, parent_record_count,
+                                len(parent_ids_to_fetch_children_for)
                             )
                             # --- End Table/ID code ---
-
-                        except Exception as e:  # Catch Parquet processing errors
+                        except Exception as e:
+                            # Catch child Parquet errors
+                            error_msg = (
+                                "Failed during child DataFrame processing "
+                                "or Parquet writing"
+                            )
                             logger.error(
-                                f"{log_prefix} Failed during parent Parquet processing "
-                                f"(cleaning, inference, casting, or writing): {e}", # Updated message
+                                "%s %s: %s", log_prefix, error_msg, e,
                                 exc_info=self.debug,
                             )
                             if self.debug:
                                 traceback.print_exc()
                             raise CommandError(
-                                f"Failed during parent Parquet processing: {e}"
+                                f"{error_msg}: {e}"
                             ) from e
-                        finally:
-                            parent_table = None  # Free memory
-                            # Ensure cleaned data is also cleared if loop breaks
-                            cleaned_parent_data = None
                     else:
                         self.stdout.write(
                             f"{log_prefix} No parent records remain after filtering. "
@@ -700,40 +549,24 @@ class Command(BaseSyncCommand):
                     filtered_parent_data = None  # Free memory
 
                     # --- Step 1c: Fetch All Child Records ---
-                    if parent_ids_to_fetch_children_for:
+                    if parent_ids_to_fetch_children_for: # Still check if parents were found, even if not filtering by them # noqa E501
+                        num_parents = len(parent_ids_to_fetch_children_for)
+                        step1c_msg = (
+                            f"=== Step 1c: Fetching ALL Child Records ===" # Updated message # noqa E501
+                        )
                         self.stdout.write(
-                            self.style.NOTICE(
-                                f"{log_prefix} === Step 1c: Fetching ALL Child "
-                                f"Records for {len(parent_ids_to_fetch_children_for)} "
-                                f"Parents ==="
-                            )
+                            self.style.NOTICE(f"{log_prefix} {step1c_msg}")
                         )
                         logger.info(
-                            f"{log_prefix} Starting Step 1c: Fetch Children"
+                            f"{log_prefix} Starting Step 1c: Fetch ALL Children" # noqa E501
                         )
 
-                        child_fetch_params = {
-                            "parent_record_ids": list(
-                                parent_ids_to_fetch_children_for
-                            ),
-                            "parent_field": self.CHILD_PARENT_LINK_FIELD,
-                        }
-                        # Add other non-date, non-top filters from initial
-                        if initial_query_params:
-                            for key, value in initial_query_params.items():
-                                if (
-                                    key not in ["$top", "filter_query"]
-                                    and key not in child_fetch_params
-                                ):
-                                    child_fetch_params[key] = value
-                                    logger.debug(
-                                        f"Adding filter '{key}' to child fetch query."
-                                    )
+                        # Fetch *all* child records without API filtering
+                        child_fetch_params = {}
 
                         logger.info(
-                            f"{log_prefix} Querying extractor for ALL child data with "
-                            f"{len(parent_ids_to_fetch_children_for)} parent IDs. "
-                            f"API page size: {self.API_PAGE_SIZE}"
+                            f"{log_prefix} Querying extractor for ALL child data (no API filters). " # noqa E501
+                            f"API page size: {self.API_PAGE_SIZE}" # noqa E501
                         )
 
                         all_child_data = []
@@ -745,25 +578,25 @@ class Command(BaseSyncCommand):
                             for i, batch_data in enumerate(batches):
                                 batch_num = i + 1
                                 self.stdout.write(
-                                    f"\r{log_prefix} Fetched child batch {batch_num}...",
+                                    f"\r{log_prefix} Fetched child batch {batch_num}...", # noqa E501
                                     ending="",
                                 )
                                 all_child_data.extend(batch_data)
                             self.stdout.write( # Overwrite last status
-                                f"\r{log_prefix} Fetched {len(all_child_data)} total "
+                                f"\r{log_prefix} Fetched {len(all_child_data)} total " # noqa E501
                                 f"raw child records. Done."
                             )
                             # Add a newline after finishing the \r updates
                             self.stdout.write("")
 
                         logger.info(
-                            f"{log_prefix} Extractor returned {len(all_child_data)} "
+                            f"{log_prefix} Extractor returned {len(all_child_data)} " # noqa E501
                             f"raw child records."
                         )
 
                         # --- Assume extractor provides datetime.date objects ---
                         logger.info(
-                            f"{log_prefix} Skipping child date pre-processing."
+                            f"{log_prefix} Skipping child date pre-processing." # noqa E501
                         )
 
                         # Save Children to Parquet
@@ -772,101 +605,57 @@ class Command(BaseSyncCommand):
                                 f"{log_prefix} Saving {len(all_child_data)} children "
                                 f"to {children_file}..."
                             )
-                            child_table = None # Ensure var exists for finally block
+                            try:
+                                # --- Create Pandas DataFrame ---
+                                child_df = pd.DataFrame(all_child_data)
+                                child_record_count = len(child_df)
 
-                            # TODO: Add robust schema inference + pandas cleaning for children too?
-                            # For now, using the simpler inference for children.
-                            try: # Schema inference and Parquet writing for children
-                                # --- Simple Schema Inference (Children) ---
-                                logger.debug(
-                                    f"{log_prefix} Inferring schema for children..."
-                                )
-                                # Use first record to infer, then adjust date field
-                                if not all_child_data:
-                                    raise ValueError(
-                                        "Cannot infer schema from empty child data."
-                                    )
+                                # --- Explicitly convert problematic columns to string --- # noqa E501
+                                if 'Termin' in child_df.columns:
+                                    logger.debug("%s Converting child 'Termin' column to string.", log_prefix) # noqa E501
+                                    # Apply conversion row-wise, handle None explicitly
+                                    child_df['Termin'] = child_df['Termin'].apply(lambda x: x.isoformat() if isinstance(x, (datetime.datetime, datetime.date)) else str(x) if x is not None else None) # noqa E501
+                                # Add other potential problematic columns here if needed # noqa E501
 
-                                inferred_schema = pa.Table.from_pylist(
-                                    [all_child_data[0]]
-                                ).schema
-                                schema_fields = {
-                                    name: field.type
-                                    for name, field in zip(
-                                        inferred_schema.names, inferred_schema
-                                    )
-                                }
-                                # Ensure date field is date32
-                                if self.DATE_FILTER_FIELD in schema_fields:
-                                    if (
-                                        schema_fields[self.DATE_FILTER_FIELD]
-                                        != pa.date32()
-                                    ):
-                                        logger.warning(
-                                            f"{log_prefix} Overriding inferred child type "
-                                            f"({schema_fields[self.DATE_FILTER_FIELD]}) "
-                                            f"for '{self.DATE_FILTER_FIELD}' to pa.date32()."
-                                        )
-                                        schema_fields[self.DATE_FILTER_FIELD] = (
-                                            pa.date32()
-                                        )
-                                    else:
-                                        logger.debug(
-                                            f"{log_prefix} Child field "
-                                            f"'{self.DATE_FILTER_FIELD}' correctly "
-                                            f"inferred as pa.date32()."
-                                        )
-                                final_child_schema = pa.schema(
-                                    list(schema_fields.items())
-                                )
+                                # --- Write Pandas DataFrame to Parquet ---
                                 logger.info(
-                                    f"{log_prefix} Using inferred schema for children: "
-                                    f"{final_child_schema}"
+                                    "%s Writing child DataFrame to %s...",
+                                    log_prefix, children_file
                                 )
-                                # --- End Simple Schema Inference ---
+                                child_df.to_parquet(children_file, index=False)
+                                logger.info("%s Child data saved to Parquet.", log_prefix) # noqa E501
 
-                                # --- Create and Write Child Table ---
-                                # NOTE: This might fail if child data also has
-                                # type inconsistencies!
-                                child_table = pa.Table.from_pylist(
-                                    all_child_data,
-                                    schema=final_child_schema
-                                )
-                                pq.write_table(child_table, children_file)
-                                child_record_count = len(all_child_data)
                                 self.stdout.write(
-                                    f"{log_prefix} Saved {child_record_count} children."
+                                    f"{log_prefix} Saved {child_record_count} "
+                                    f"children."
                                 )
-                                logger.info(
-                                    f"{log_prefix} Saved {child_record_count} children "
-                                    f"to Parquet."
+                            except Exception as e:
+                                # Catch child Parquet errors
+                                error_msg = (
+                                    "Failed during child DataFrame processing "
+                                    "or Parquet writing"
                                 )
-                                # --- End Child Table ---
-
-                            except Exception as e: # Catch child Parquet errors
                                 logger.error(
-                                    f"{log_prefix} Failed during child Parquet processing "
-                                    f"(schema or writing): {e}",
+                                    "%s %s: %s", log_prefix, error_msg, e,
                                     exc_info=self.debug,
                                 )
                                 if self.debug:
                                     traceback.print_exc()
                                 raise CommandError(
-                                    f"Failed during child Parquet processing: {e}"
+                                    f"{error_msg}: {e}"
                                 ) from e
-                            finally:
-                                child_table = None  # Free memory
                         else:
                             self.stdout.write(
                                 f"{log_prefix} No child records found for the "
                                 f"fetched parents."
                             )
-                            logger.info(f"{log_prefix} No child records found.")
-
-                        all_child_data = None  # Free memory
+                            logger.info(
+                                "%s No child records found.", log_prefix
+                            )
                     else:
                         self.stdout.write(
-                            f"{log_prefix} No parent IDs found, skipping child fetch."
+                            f"{log_prefix} No parent IDs found, skipping child " # noqa E501
+                            f"fetch."
                         )
 
                     # --- Step 2a: Process Parents from File ---
@@ -877,7 +666,7 @@ class Command(BaseSyncCommand):
                         )
                     )
                     logger.info(
-                        f"{log_prefix} Starting Step 2a: Processing Parents"
+                        f"{log_prefix} Starting Step 2a: Processing Parents" # noqa E501
                     )
 
                     if parents_file.exists() and parent_record_count > 0:
@@ -886,15 +675,15 @@ class Command(BaseSyncCommand):
                             parent_record_count + process_batch_size - 1
                         ) // process_batch_size
                         self.stdout.write(
-                            f"{log_prefix} Processing parents in {total_parent_batches} "
+                            f"{log_prefix} Processing parents in {total_parent_batches} " # noqa E501
                             f"batches of size {process_batch_size}."
                         )
-                        parent_unique_field = parent_pipeline.loader.config.get(
+                        parent_unique_field = parent_pipeline.loader.config.get( # noqa E501
                             "unique_field", "legacy_id"
                         )
 
                         for i, batch in enumerate(
-                            parent_pf.iter_batches(batch_size=process_batch_size)
+                            parent_pf.iter_batches(batch_size=process_batch_size) # noqa E501
                         ):
                             batch_num = i + 1
                             self.stdout.write(
@@ -906,7 +695,7 @@ class Command(BaseSyncCommand):
 
                             if not parent_source_data:
                                 self.stdout.write(
-                                    f"{log_prefix} Parent Batch {batch_num} is empty, "
+                                    f"{log_prefix} Parent Batch {batch_num} is empty, " # noqa E501
                                     f"skipping."
                                 )
                                 continue
@@ -928,13 +717,13 @@ class Command(BaseSyncCommand):
                             parent_load_result = parent_pipeline.loader.load(
                                 transformed_parent_data,
                                 update_existing=(
-                                    options.get("force_update") or options.get("full")
+                                    options.get("force_update") or options.get("full") # noqa E501
                                 ),
                             )
 
-                            parent_stats["created"] += parent_load_result.created
-                            parent_stats["updated"] += parent_load_result.updated
-                            parent_stats["skipped"] += parent_load_result.skipped
+                            parent_stats["created"] += parent_load_result.created # noqa E501
+                            parent_stats["updated"] += parent_load_result.updated # noqa E501
+                            parent_stats["skipped"] += parent_load_result.skipped # noqa E501
                             parent_stats["errors"] += parent_load_result.errors
 
                             # Collect successfully loaded parent IDs
@@ -945,7 +734,7 @@ class Command(BaseSyncCommand):
                             }
                             failed_ids = set()
                             if parent_load_result.error_details:
-                                for err_detail in parent_load_result.error_details:
+                                for err_detail in parent_load_result.error_details: # noqa E501
                                     rec = err_detail.get("record")
                                     if rec and parent_unique_field in rec:
                                         # Ensure value exists before casting
@@ -959,19 +748,19 @@ class Command(BaseSyncCommand):
 
                             self.stdout.write(
                                 self.style.SUCCESS(
-                                    f"{log_prefix} Parent Batch {batch_num} finished: "
+                                    f"{log_prefix} Parent Batch {batch_num} finished: " # noqa E501
                                     f"{parent_load_result.created} C, "
                                     f"{parent_load_result.updated} U, "
                                     f"{parent_load_result.skipped} S, "
                                     f"{parent_load_result.errors} E. "
-                                    f"({len(successful_ids_in_batch)} successful loads)"
+                                    f"({len(successful_ids_in_batch)} successful loads)" # noqa E501
                                 )
                             )
                             if parent_load_result.error_details:
                                 self.stdout.write(
                                     self.style.WARNING(
                                         f"Parent Errors (Batch {batch_num}): "
-                                        f"{len(parent_load_result.error_details)}"
+                                        f"{len(parent_load_result.error_details)}" # noqa E501
                                     )
                                 )
                                 # Log first few errors
@@ -982,27 +771,27 @@ class Command(BaseSyncCommand):
                                 if len(parent_load_result.error_details) > 5:
                                     self.stdout.write(
                                         f"  ... and "
-                                        f"{len(parent_load_result.error_details) - 5} "
+                                        f"{len(parent_load_result.error_details) - 5} " # noqa E501
                                         f"more."
                                     )
                             if parent_load_result.errors > 0:
                                 sync_successful = False # Mark sync as failed
 
                         self.stdout.write(
-                            f"{log_prefix} Finished processing all parent batches. "
+                            f"{log_prefix} Finished processing all parent batches. " # noqa E501
                             f"Total successful parent loads: "
                             f"{len(successfully_loaded_parent_ids)}"
                         )
                         logger.info(
                             f"{log_prefix} Finished parent processing. "
-                            f"{len(successfully_loaded_parent_ids)} successfully loaded."
+                            f"{len(successfully_loaded_parent_ids)} successfully loaded." # noqa E501
                         )
                     else:
                         self.stdout.write(
-                            f"{log_prefix} No parent data file found or no records "
+                            f"{log_prefix} No parent data file found or no records " # noqa E501
                             f"to process."
                         )
-                        logger.info(f"{log_prefix} Skipping parent processing step.")
+                        logger.info(f"{log_prefix} Skipping parent processing step.") # noqa E501
 
                     # --- Step 2b: Process Children from File ---
                     self.stdout.write(
@@ -1012,7 +801,7 @@ class Command(BaseSyncCommand):
                         )
                     )
                     logger.info(
-                        f"{log_prefix} Starting Step 2b: Processing Children"
+                        f"{log_prefix} Starting Step 2b: Processing Children" # noqa E501
                     )
 
                     if (
@@ -1025,13 +814,14 @@ class Command(BaseSyncCommand):
                             child_record_count + process_batch_size - 1
                         ) // process_batch_size
                         self.stdout.write(
-                            f"{log_prefix} Processing children in {total_child_batches} "
-                            f"batches of size {process_batch_size}."
+                            f"{log_prefix} Processing children in "
+                            f"{total_child_batches} batches of size "
+                            f"{process_batch_size}."
                         )
                         child_parent_link_field = self.CHILD_PARENT_LINK_FIELD
 
                         for i, batch in enumerate(
-                            child_pf.iter_batches(batch_size=process_batch_size)
+                            child_pf.iter_batches(batch_size=process_batch_size) # noqa E501
                         ):
                             batch_num = i + 1
                             self.stdout.write(
@@ -1042,12 +832,12 @@ class Command(BaseSyncCommand):
 
                             if not child_source_data:
                                 self.stdout.write(
-                                    f"{log_prefix} Child Batch {batch_num} is empty, "
+                                    f"{log_prefix} Child Batch {batch_num} is empty, " # noqa E501
                                     f"skipping."
                                 )
                                 continue
 
-                            # Filter children based on successfully loaded parents
+                            # Filter children based on successfully loaded parents # noqa E501
                             filtered_child_data = [
                                 rec for rec in child_source_data
                                 if str(rec.get(child_parent_link_field))
@@ -1058,13 +848,13 @@ class Command(BaseSyncCommand):
                             )
                             if skipped_count > 0:
                                 logger.info(
-                                    f"{log_prefix} Batch {batch_num}: Filtered out "
-                                    f"{skipped_count} children linked to unloaded parents."
+                                    f"{log_prefix} Batch {batch_num}: Filtered out " # noqa E501
+                                    f"{skipped_count} children linked to unloaded parents." # noqa E501
                                 )
 
                             if not filtered_child_data:
                                 self.stdout.write(
-                                    f"{log_prefix} No children in Batch {batch_num} "
+                                    f"{log_prefix} No children in Batch {batch_num} " # noqa E501
                                     f"remain after filtering, skipping."
                                 )
                                 continue
@@ -1086,18 +876,18 @@ class Command(BaseSyncCommand):
                             child_load_result = child_pipeline.loader.load(
                                 transformed_child_data,
                                 update_existing=(
-                                    options.get("force_update") or options.get("full")
+                                    options.get("force_update") or options.get("full") # noqa E501
                                 ),
                             )
 
-                            child_stats["created"] += child_load_result.created
-                            child_stats["updated"] += child_load_result.updated
-                            child_stats["skipped"] += child_load_result.skipped
+                            child_stats["created"] += child_load_result.created # noqa E501
+                            child_stats["updated"] += child_load_result.updated # noqa E501
+                            child_stats["skipped"] += child_load_result.skipped # noqa E501
                             child_stats["errors"] += child_load_result.errors
 
                             self.stdout.write(
                                 self.style.SUCCESS(
-                                    f"{log_prefix} Child Batch {batch_num} finished: "
+                                    f"{log_prefix} Child Batch {batch_num} finished: " # noqa E501
                                     f"{child_load_result.created} C, "
                                     f"{child_load_result.updated} U, "
                                     f"{child_load_result.skipped} S, "
@@ -1108,7 +898,7 @@ class Command(BaseSyncCommand):
                                 self.stdout.write(
                                     self.style.WARNING(
                                         f"Child Errors (Batch {batch_num}): "
-                                        f"{len(child_load_result.error_details)}"
+                                        f"{len(child_load_result.error_details)}" # noqa E501
                                     )
                                 )
                                 # Log first few errors to stdout/log
@@ -1117,11 +907,11 @@ class Command(BaseSyncCommand):
                                 ):
                                     err_msg = f"  - {err}"
                                     self.stdout.write(err_msg)
-                                    logger.warning(f"{log_prefix} Child Load Error: {err_msg}")
+                                    logger.warning(f"{log_prefix} Child Load Error: {err_msg}") # noqa E501
                                 if len(child_load_result.error_details) > 5:
                                     more_msg = (
                                         f"  ... and "
-                                        f"{len(child_load_result.error_details) - 5} "
+                                        f"{len(child_load_result.error_details) - 5} " # noqa E501
                                         f"more."
                                     )
                                     self.stdout.write(more_msg)
@@ -1131,28 +921,28 @@ class Command(BaseSyncCommand):
                                 sync_successful = False # Mark sync as failed
 
                         self.stdout.write(
-                            f"{log_prefix} Finished processing all child batches."
+                            f"{log_prefix} Finished processing all child batches." # noqa E501
                         )
                         logger.info(f"{log_prefix} Finished child processing.")
                     elif not successfully_loaded_parent_ids:
                         self.stdout.write(
-                            f"{log_prefix} No parents were successfully loaded, "
+                            f"{log_prefix} No parents were successfully loaded, " # noqa E501
                             f"skipping child processing."
                         )
                         logger.warning(
-                            f"{log_prefix} Skipping child processing - no parents loaded."
+                            f"{log_prefix} Skipping child processing - no parents loaded." # noqa E501
                         )
                     else:
                         self.stdout.write(
-                            f"{log_prefix} No child data file found or no records "
+                            f"{log_prefix} No child data file found or no records " # noqa E501
                             f"to process."
                         )
-                        logger.info(f"{log_prefix} Skipping child processing step.")
+                        logger.info(f"{log_prefix} Skipping child processing step.") # noqa E501
 
                 except Exception as e:
                     sync_successful = False
                     self.stderr.write(
-                        self.style.ERROR(f"{log_prefix} Full-Load mode failed: {e}")
+                        self.style.ERROR(f"{log_prefix} Full-Load mode failed: {e}") # noqa E501
                     )
                     logger.error(
                         f"{log_prefix} Full-Load mode failed: {e}",
@@ -1167,38 +957,43 @@ class Command(BaseSyncCommand):
                 duration = (end_time - command_start_time).total_seconds()
 
                 self.stdout.write(
-                    self.style.NOTICE(f"{log_prefix} === Step 3: Sync Summary ===")
+                    self.style.NOTICE(f"{log_prefix} === Step 3: Sync Summary ===") # noqa E501
                 )
 
                 # Report parent stats
+                parent_summary = (
+                    f"Parent ({self.PARENT_ENTITY_TYPE}) summary: "
+                    f"{parent_stats['created']} C, {parent_stats['updated']} U, " # noqa E501
+                    f"{parent_stats['skipped']} S, {parent_stats['errors']} E." # noqa E501
+                )
                 self.stdout.write(
-                    self.style.SUCCESS(
-                        f"{log_prefix} Parent ({self.PARENT_ENTITY_TYPE}) summary: "
-                        f"{parent_stats['created']} C, {parent_stats['updated']} U, "
-                        f"{parent_stats['skipped']} S, {parent_stats['errors']} E."
-                    )
+                    self.style.SUCCESS(f"{log_prefix} {parent_summary}")
                 )
 
                 # Report child stats
+                child_summary = (
+                    f"Child ({self.CHILD_ENTITY_TYPE}) summary: "
+                    f"{child_stats['created']} C, {child_stats['updated']} U, " # noqa E501
+                    f"{child_stats['skipped']} S, {child_stats['errors']} E." # noqa E501
+                )
                 self.stdout.write(
-                    self.style.SUCCESS(
-                        f"{log_prefix} Child ({self.CHILD_ENTITY_TYPE}) summary: "
-                        f"{child_stats['created']} C, {child_stats['updated']} U, "
-                        f"{child_stats['skipped']} S, {child_stats['errors']} E."
-                    )
+                    self.style.SUCCESS(f"{log_prefix} {child_summary}")
                 )
 
                 log_summary = (
-                    f"{log_prefix} Orchestrator finished in {duration:.2f} seconds. "
-                    f"Mode: Full-Load. "
-                    f"Parents: C={parent_stats['created']}, U={parent_stats['updated']}, "
-                    f"S={parent_stats['skipped']}, E={parent_stats['errors']}. "
-                    f"Children: C={child_stats['created']}, U={child_stats['updated']}, "
-                    f"S={child_stats['skipped']}, E={child_stats['errors']}."
+                    f"{log_prefix} Orchestrator finished in {duration:.2f} " # noqa E501
+                    f"seconds. Mode: Full-Load. "
+                    f"Parents: C={parent_stats['created']}, "
+                    f"U={parent_stats['updated']}, S={parent_stats['skipped']}, " # noqa E501
+                    f"E={parent_stats['errors']}. "
+                    f"Children: C={child_stats['created']}, "
+                    f"U={child_stats['updated']}, S={child_stats['skipped']}, " # noqa E501
+                    f"E={child_stats['errors']}."
                 )
                 logger.info(log_summary)
                 self.stdout.write(
-                    f"{log_prefix} Sales record sync finished in {duration:.2f} seconds"
+                    f"{log_prefix} Sales record sync finished in "
+                    f"{duration:.2f} seconds"
                 )
 
                 # Determine final status
