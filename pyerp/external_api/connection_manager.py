@@ -29,7 +29,8 @@ logger.debug(f"CONNECTIONS_FILE: {CONNECTIONS_FILE}")
 DEFAULT_CONNECTIONS = {
     "legacy_erp": False,
     "images_cms": False,
-    "fx_sync": True
+    "fx_sync": True,
+    "buchhaltungs_buttler": False,
 }
 
 
@@ -110,7 +111,8 @@ def set_connection_status(connection_name: str, enabled: bool) -> bool:
         and connection_name not in DEFAULT_CONNECTIONS
     ):
         logger.error(
-            f"Attempted to set status for unknown connection: " f"{connection_name}"
+            f"Attempted to set status for unknown connection: "
+            f"{connection_name}"
         )
         return False
 

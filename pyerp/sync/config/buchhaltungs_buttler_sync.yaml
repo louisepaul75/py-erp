@@ -1,0 +1,131 @@
+# Configuration for Buchhaltungs Buttler synchronization
+
+# Global settings (if needed)
+# page_size: 500 # Default page size for extractors
+
+# Define sources, targets, and mappings here
+# Example structure (replace with actual details):
+
+mappings:
+  - source: buchhaltungs_buttler
+    target: pyerp
+    entity_type: bhb_creditor # Represents BHB Creditors
+    description: "Sync BuchhaltungsButler Creditors to pyERP Suppliers"
+    mapping_config:
+      extractor:
+        class: pyerp.sync.extractors.buchhaltungsbutler.BuchhaltungsButlerCreditorExtractor
+        config:
+          # API keys/auth handled by the client via settings
+          page_size: 500 # Optional: Override default page size
+      transformer: # Optional: Add if transformations beyond simple mapping are needed
+        # class: pyerp.sync.transformers.buchhaltungs_buttler.CreditorTransformer
+        config:
+          field_mappings: # BHB Field -> pyERP Field
+            id: legacy_bhb_id # Assuming BHB ID is 'id'
+            name: name
+            companyName: company_name # Example mapping
+            vatId: vat_id
+            number: supplier_number # Example mapping
+            # address fields (assuming nested structure in BHB)
+            "address.street": street
+            "address.zip": postal_code
+            "address.city": city
+            "address.country": country_code # Assuming country code
+            # ... add other relevant creditor field mappings ...
+      loader:
+        class: pyerp.sync.loaders.django_model.DjangoModelLoader
+        config:
+          # !!! Adjust to your actual Supplier model !!!
+          model: pyerp.business_modules.purchasing.models.Supplier
+          key_field: legacy_bhb_id # Field in pyERP model to match BHB ID
+          update_existing: true
+
+  - source: buchhaltungs_buttler
+    target: pyerp
+    entity_type: bhb_receipt_inbound # Represents BHB Inbound Receipts
+    description: "Sync BuchhaltungsButler Inbound Receipts to pyERP Purchase Invoices"
+    mapping_config:
+      extractor:
+        class: pyerp.sync.extractors.buchhaltungsbutler.BuchhaltungsButlerReceiptExtractor
+        config:
+          list_direction: inbound # Required config for this extractor
+          page_size: 500
+      transformer:
+        # class: pyerp.sync.transformers.buchhaltungs_buttler.InboundReceiptTransformer
+        config:
+          field_mappings:
+            id: legacy_bhb_id
+            receiptNumber: document_number
+            receiptDate: date
+            dueDate: due_date
+            amount: total_amount
+            currency: currency_code # Assuming currency code
+            paymentStatus: payment_status # Needs mapping (e.g., 'paid', 'open')
+            creditorId: supplier_legacy_bhb_id # Link via BHB creditor ID
+            # ... add other relevant inbound receipt fields ...
+      loader:
+        class: pyerp.sync.loaders.django_model.DjangoModelLoader
+        config:
+          # !!! Adjust to your actual Purchase Invoice model !!!
+          model: pyerp.business_modules.accounting.models.PurchaseInvoice
+          key_field: legacy_bhb_id
+          # Handle linking to Supplier based on supplier_legacy_bhb_id
+          relation_config:
+            supplier:
+              lookup_field: legacy_bhb_id
+              model: pyerp.business_modules.purchasing.models.Supplier
+              required: false # Or true, depending on requirements
+          update_existing: true
+
+  - source: buchhaltungs_buttler
+    target: pyerp
+    entity_type: bhb_receipt_outbound # Represents BHB Outbound Receipts
+    description: "Sync BuchhaltungsButler Outbound Receipts to pyERP Sales Invoices"
+    mapping_config:
+      extractor:
+        class: pyerp.sync.extractors.buchhaltungsbutler.BuchhaltungsButlerReceiptExtractor
+        config:
+          list_direction: outbound # Required config for this extractor
+          page_size: 500
+      transformer:
+        # class: pyerp.sync.transformers.buchhaltungs_buttler.OutboundReceiptTransformer
+        config:
+          field_mappings:
+            id: legacy_bhb_id
+            receiptNumber: document_number
+            receiptDate: date
+            dueDate: due_date
+            amount: total_amount
+            currency: currency_code
+            paymentStatus: payment_status
+            debtorId: customer_legacy_bhb_id # Assuming BHB uses 'debtor' for customers
+            # ... add other relevant outbound receipt fields ...
+      loader:
+        class: pyerp.sync.loaders.django_model.DjangoModelLoader
+        config:
+          # !!! Adjust to your actual Sales Invoice model !!!
+          model: pyerp.business_modules.sales.models.SalesInvoice
+          key_field: legacy_bhb_id
+          # Handle linking to Customer based on customer_legacy_bhb_id
+          # relation_config:
+          #   customer:
+          #     lookup_field: legacy_bhb_id # Assuming customer model has this
+          #     model: pyerp.business_modules.crm.models.Customer
+          #     required: false
+          update_existing: true
+
+# Optional: Define schedule if needed for automatic runs
+# schedule:
+#   frequency: hourly # Example
+#   # Or use Celery Beat schedule directly in settings
+
+# - source: buchhaltungs_buttler
+#   target: pyerp
+#   entity_type: customers # Another example entity
+#   mapping_config:
+#     # ... config for customers ...
+
+# Define schedule if needed
+# schedule:
+#   frequency: daily
+#   time: '04:00' 
