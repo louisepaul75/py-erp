@@ -266,14 +266,14 @@ class LegacyAPIExtractor(BaseExtractor):
                 raise ExtractError(f"Extraction failed: {e}")
             return []
 
-    def extract_batched(self, batch_size: int = 10000, query_params: Optional[Dict[str, Any]] = None):
+    def extract_batched(self, api_page_size: int = 10000, query_params: Optional[Dict[str, Any]] = None):
         """
         Extract data from the API in batches using pagination.
 
         Args:
-            batch_size: The number of records to fetch per API call.
+            api_page_size: The number of records (page size / $top) to fetch per API call.
             query_params: Additional query parameters, similar to extract(),
-                          but $top and $skip will be managed internally.
+                          but $top and $skip will be managed internally based on api_page_size.
 
         Yields:
             List of records (each batch) from the API.
@@ -286,6 +286,11 @@ class LegacyAPIExtractor(BaseExtractor):
         query_params = query_params or {}
         skip = 0
         processed_records = 0
+
+        # --- DEBUG: Log received query_params ---
+        logger.debug(f"extract_batched received query_params: {query_params}")
+        # --- END DEBUG ---
+
         top_limit = None
         if "$top" in query_params:
              top_limit = int(query_params.pop("$top"))  # Remove from params passed to fetch_table
@@ -296,7 +301,7 @@ class LegacyAPIExtractor(BaseExtractor):
 
         logger.info(
             f"Starting batched extraction from {table_name} "
-            f"with batch size {batch_size}"
+            f"with API page size {api_page_size}"
         )
 
         # --- Client-Side Filtering Setup ---
@@ -345,6 +350,10 @@ class LegacyAPIExtractor(BaseExtractor):
             }
             logger.info(f"Client-side filter: {filter_parent_field} in {len(filter_parent_ids)} IDs")
 
+        # --- DEBUG: Log generated client_filters ---
+        logger.debug(f"extract_batched generated client_filters: {client_filters}")
+        # --- END DEBUG ---
+
         # --- Build API filter query (still send original, might help slightly) ---
         # We keep this logic to send the filter to the API, even if it doesn't 
         # handle it correctly with pagination. It might reduce some data transfer.
@@ -362,12 +371,14 @@ class LegacyAPIExtractor(BaseExtractor):
                     f"{type(base_filter)}. Ignoring."
                 )
         # 2. Add parent filter 
-        if "parent_record_ids" in query_params:
-            parent_ids = query_params["parent_record_ids"]
-            parent_field = query_params.get("parent_field", "AbsNr") 
-            parent_filter_part = [[parent_field, "=", pid] for pid in parent_ids]
-            final_filter_query.extend(parent_filter_part)
-            has_parent_filter_batched = True  
+        # --- MODIFICATION: Comment out adding parent filter to API query ---
+        # if "parent_record_ids" in query_params:
+        #     parent_ids = query_params["parent_record_ids"]
+        #     parent_field = query_params.get("parent_field", "AbsNr") 
+        #     parent_filter_part = [[parent_field, "=", pid] for pid in parent_ids]
+        #     final_filter_query.extend(parent_filter_part)
+        #     has_parent_filter_batched = True  # Set flag (though unused now)
+        # --- END MODIFICATION ---
 
         # 3. Add date filters (send to API even if handled client-side)
         # if not has_parent_filter_batched: # Keep sending date filter regardless? Or respect the old logic?
@@ -394,7 +405,7 @@ class LegacyAPIExtractor(BaseExtractor):
         # --- Pagination loop ---
         while True:
             # Determine the size for the current API call
-            current_batch_size = batch_size
+            current_api_page_size = api_page_size
             if top_limit is not None:
                 remaining = top_limit - processed_records
                 if remaining <= 0:
@@ -404,11 +415,11 @@ class LegacyAPIExtractor(BaseExtractor):
                     )
                     break
                 # Request only the remaining number if it's less than the full batch size
-                current_batch_size = min(batch_size, remaining)
+                current_api_page_size = min(api_page_size, remaining)
 
             logger.debug(
                 f"Fetching batch: table={table_name}, skip={skip}, "
-                f"top={current_batch_size}"
+                f"top={current_api_page_size}"
             )
             try:
                 # Assuming fetch_table supports skip and top for pagination
@@ -420,7 +431,7 @@ class LegacyAPIExtractor(BaseExtractor):
                     filter_query=final_filter_query 
                     if final_filter_query else None,
                     skip=skip,
-                    top=current_batch_size
+                    top=current_api_page_size
                     # Pass other relevant params from query_params if needed,
                     # e.g., select, orderby
                     # select=query_params.get('$select'),
@@ -431,7 +442,7 @@ class LegacyAPIExtractor(BaseExtractor):
                 if batch is None:
                     logger.warning(
                         f"Received None batch for skip={skip}, "
-                        f"top={current_batch_size}. Stopping."
+                        f"top={current_api_page_size}. Stopping."
                     )
                     break
 
@@ -469,7 +480,7 @@ class LegacyAPIExtractor(BaseExtractor):
 
                 logger.debug(
                     f"Received raw batch of {batch_record_count} records "
-                    f"for skip={skip}, top={current_batch_size}"
+                    f"for skip={skip}, top={current_api_page_size}"
                 )
 
                 # --- Apply Client-Side Filtering ---
@@ -483,9 +494,18 @@ class LegacyAPIExtractor(BaseExtractor):
                             date_filter = client_filters['date']
                             record_date_val = record.get(date_filter['key'])
                             if record_date_val is not None:
+                                # --- DEBUG: Log date values before comparison ---
+                                logger.debug(f"Record Date Value (raw): {record_date_val} (type: {type(record_date_val)})")
+                                logger.debug(f"Filter Key: {date_filter['key']}")
+                                logger.debug(f"Filter GTE: {date_filter['gte']}")
+                                logger.debug(f"Filter LTE: {date_filter['lte']}")
+                                # --- END DEBUG ---
                                 try:
                                     # Convert record date to naive datetime for comparison
                                     record_date = pd.to_datetime(record_date_val).tz_localize(None)
+                                    # --- DEBUG: Log parsed record date ---
+                                    logger.debug(f"Parsed Record Date (naive): {record_date}")
+                                    # --- END DEBUG ---
                                     
                                     if date_filter['gte'] and not (record_date >= date_filter['gte']):
                                         passes_filter = False
@@ -504,7 +524,11 @@ class LegacyAPIExtractor(BaseExtractor):
                         if passes_filter and 'parent' in client_filters:
                             parent_filter = client_filters['parent']
                             record_parent_val = record.get(parent_filter['key'])
-                            if record_parent_val is None or record_parent_val not in parent_filter['ids']:
+                            # Ensure consistent type (string) for comparison
+                            record_parent_str = str(record_parent_val) if record_parent_val is not None else None
+                            parent_ids_str = {str(pid) for pid in parent_filter['ids']}
+                            
+                            if record_parent_str is None or record_parent_str not in parent_ids_str:
                                 passes_filter = False
 
                         # Add more client-side filters here if needed...
@@ -535,24 +559,25 @@ class LegacyAPIExtractor(BaseExtractor):
                             "Stopping batch fetch."
                         )
                         break
-                    if batch_record_count < current_batch_size:
+                    if batch_record_count < current_api_page_size:
                         logger.info(
                             f"Received last batch from API ({batch_record_count} < "
-                            f"{current_batch_size}). Stopping batch fetch."
+                            f"{current_api_page_size}). Stopping batch fetch."
                         )
                         break
                     # Continue loop if filtered batch is empty but raw batch was full
+                    # Note: We break based on the *raw* count from the API vs requested size
 
                 # Check if the API returned fewer records than requested, indicating the end
-                if batch_record_count < current_batch_size:
+                if batch_record_count < current_api_page_size:
                     logger.info(
-                        f"Received last batch ({batch_record_count} < "
-                        f"{current_batch_size}). Stopping pagination."
+                        f"Received last batch ({batch_record_count} < requested {current_api_page_size}). "
+                        f"Stopping pagination."
                     )
                     break
 
                 # Prepare for the next batch
-                skip += batch_size # Increment skip by the requested batch size, not the filtered count
+                skip += api_page_size # Increment skip by the requested API page size
 
             except ExtractError as e:
                 logger.error(f"Extraction error during batch fetch: {e}")
