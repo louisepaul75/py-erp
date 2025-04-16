@@ -1,7 +1,7 @@
 """Transformer for sales records from legacy ERP system."""
 
 import re
-from datetime import datetime
+from datetime import datetime, date
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Dict, Any, List, Optional
 
@@ -9,7 +9,7 @@ from pyerp.utils.logging import get_logger, log_data_sync_event
 
 from .base import BaseTransformer
 from pyerp.business_modules.products.models import VariantProduct
-from pyerp.business_modules.sales.models import SalesRecord
+from pyerp.business_modules.sales.models import SalesRecord, Address, Customer, PaymentTerms, PaymentMethod, ShippingMethod
 
 
 logger = get_logger(__name__)
@@ -201,38 +201,45 @@ class SalesRecordTransformer(BaseTransformer):
                 )
                 # Continue without billing address since it's now optional
 
-            # Parse dates
-            record_date = self._parse_legacy_date(data.get("Datum"))
-            if not record_date:
+            # Dates are now pre-parsed by the extractor as date objects
+            record_date = data.get("Datum")
+            if not isinstance(record_date, date):
                 logger.warning(
-                    f"Could not parse record date for record "
-                    f"{data.get('AbsNr')}"
+                    f"Invalid or missing record date for record "
+                    f"{data.get('AbsNr')}: Expected date object, got {type(record_date)}"
                 )
                 return None
+            
+            payment_date = data.get("ZahlungsDat") # Now expected as date object or None
+            if payment_date is not None and not isinstance(payment_date, date):
+                 logger.warning(
+                     f"Invalid payment date for record {data.get('AbsNr')}: "
+                     f"Expected date object or None, got {type(payment_date)}. Setting to None."
+                 )
+                 payment_date = None # Set to None if invalid type
 
-            # Calculate due date
-            due_date = self._calculate_due_date(data)
+            # Calculate due date (expects date object)
+            due_date = self._calculate_due_date(record_date, data)
             if not due_date:
-                # Use record date + 30 days as fallback
+                # Fallback: Use record date + default days (e.g., 30)
                 try:
-                    from datetime import datetime, timedelta
-
-                    date_obj = datetime.strptime(record_date, "%Y-%m-%d")
-                    due_date = (
-                        date_obj + timedelta(days=30)
-                    ).strftime("%Y-%m-%d")
-                except Exception:
+                    from datetime import timedelta
+                    default_days = 30 # Define a default
+                    due_date = record_date + timedelta(days=default_days)
+                except Exception as e:
                     logger.warning(
-                        f"Could not calculate due date for record "
-                        f"{data.get('AbsNr')}"
+                        f"Could not calculate fallback due date for record "
+                        f"{data.get('AbsNr')}: {e}"
                     )
-                    return None
+                    # Decide if we should return None or proceed without due_date
+                    # For now, let's proceed with None for due_date
+                    due_date = None 
 
             # Transform the record
             transformed = {
                 "legacy_id": data.get("AbsNr"),
                 "record_number": str(data.get("PapierNr", "")),
-                "record_date": record_date,
+                "record_date": record_date, # Directly use the date object
                 "record_type": self._map_record_type(data.get("Papierart")),
                 "customer": customer,
                 # Financial fields
@@ -249,9 +256,7 @@ class SalesRecordTransformer(BaseTransformer):
                 "payment_status": self._map_payment_status(
                     data.get("bezahlt", False)
                 ),
-                "payment_date": self._parse_legacy_date(
-                    data.get("ZahlungsDat")
-                ),
+                "payment_date": payment_date, # Directly use the date object or None
                 # Currency information
                 "currency": self._map_currency(data.get("Währung")),
                 # Shipping information
@@ -516,21 +521,6 @@ class SalesRecordTransformer(BaseTransformer):
 
         return transformed_items_final
 
-    def _parse_legacy_date(self, date_str: Optional[str]) -> Optional[str]:
-        """Parse legacy date format (D!M!Y) to ISO format."""
-        if not date_str or date_str == "0!0!0":
-            return None
-
-        try:
-            day, month, year = date_str.split("!")
-            # Handle 2-digit years
-            if len(year) == 2:
-                year = "19" + year if int(year) > 50 else "20" + year
-            return f"{year}-{month.zfill(2)}-{day.zfill(2)}"
-        except Exception:
-            logger.warning(f"Could not parse legacy date: {date_str}")
-            return None
-
     def _map_record_type(self, type_code: Optional[str]) -> str:
         """Map legacy record type codes to new system values."""
         type_mapping = {
@@ -548,9 +538,15 @@ class SalesRecordTransformer(BaseTransformer):
             return "PAID"
 
         # Check if overdue
-        due_date = self._calculate_due_date(data)
-        if due_date and due_date < datetime.now().strftime("%Y-%m-%d"):
-            return "OVERDUE"
+        # Note: _calculate_due_date now returns a date object or None
+        # We need the record_date as well for comparison
+        record_date = data.get("Datum") # Assumes this is a date object now
+        if isinstance(record_date, date):
+             due_date = self._calculate_due_date(record_date, data)
+             if due_date and due_date < date.today():
+                 return "OVERDUE"
+        else:
+            logger.warning(f"Cannot calculate overdue status: record_date is not a date object in data for {data.get('AbsNr')}")
 
         return "PENDING"
 
@@ -679,20 +675,31 @@ class SalesRecordTransformer(BaseTransformer):
             logger.error(f"Error extracting shipping method: {e}")
             return None
 
-    def _calculate_due_date(self, data: Dict[str, Any]) -> Optional[str]:
-        """Calculate due date based on invoice date and payment terms."""
-        invoice_date = self._parse_legacy_date(data.get("Datum"))
-        if not invoice_date:
+    def _calculate_due_date(self, record_date: date, data: Dict[str, Any]) -> Optional[date]:
+        """Calculate due date based on invoice date (already a date object) and payment terms."""
+        # record_date is now expected to be a datetime.date object
+        if not record_date:
+            logger.warning("Cannot calculate due date: Missing record_date object")
             return None
 
         try:
-            date_obj = datetime.strptime(invoice_date, "%Y-%m-%d")
+            # Get days_due from data, fallback to 30
             days_due = int(data.get("NettoTage", 30))
-            due_date = date_obj.replace(day=date_obj.day + days_due)
-            return due_date.strftime("%Y-%m-%d")
-        except Exception:
-            logger.warning(
-                f"Could not calculate due date for record {data.get('AbsNr')}"
+            
+            # Calculate due date using timedelta
+            from datetime import timedelta
+            due_date = record_date + timedelta(days=days_due)
+            return due_date
+        except (ValueError, TypeError) as e:
+             logger.warning(
+                 f"Could not calculate due date from record_date {record_date} "
+                 f"and NettoTage {data.get('NettoTage')}. Error: {e}"
+             )
+             return None
+        except Exception as e: # Catch other potential errors
+            logger.error(
+                f"Unexpected error calculating due date for record {data.get('AbsNr')}: {e}",
+                exc_info=True
             )
             return None
 

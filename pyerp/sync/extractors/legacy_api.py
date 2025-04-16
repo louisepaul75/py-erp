@@ -10,6 +10,7 @@ import pandas as pd
 from pyerp.external_api.legacy_erp import LegacyERPClient
 from pyerp.utils.logging import get_logger, log_data_sync_event
 from pyerp.sync.exceptions import ExtractError
+from pyerp.utils.date_utils import parse_date_string # Import the new utility
 
 from .base import BaseExtractor
 
@@ -40,6 +41,8 @@ class LegacyAPIExtractor(BaseExtractor):
     # Known date keys to check for in query_params
     # Extend this list if other date fields need filtering
     KNOWN_DATE_KEYS = ["Datum", "modified_date"]
+    # Fields to convert to datetime.date objects after extraction
+    DATE_FIELDS_TO_CONVERT = ["Datum", "ZahlungsDat"]
 
     def __init__(self, config):
         """Initialize with configuration.
@@ -239,6 +242,9 @@ class LegacyAPIExtractor(BaseExtractor):
                         f"records"
                     )
 
+                    # Convert date fields before caching and returning
+                    self._parse_and_convert_dates(result)
+
                     # Store in cache for future use
                     self.__class__._response_cache[cache_key] = result
                     logger.info(
@@ -371,13 +377,14 @@ class LegacyAPIExtractor(BaseExtractor):
                     f"{type(base_filter)}. Ignoring."
                 )
         # 2. Add parent filter 
-        # --- MODIFICATION: Comment out adding parent filter to API query ---
-        # if "parent_record_ids" in query_params:
-        #     parent_ids = query_params["parent_record_ids"]
-        #     parent_field = query_params.get("parent_field", "AbsNr") 
-        #     parent_filter_part = [[parent_field, "=", pid] for pid in parent_ids]
-        #     final_filter_query.extend(parent_filter_part)
-        #     has_parent_filter_batched = True  # Set flag (though unused now)
+        # --- MODIFICATION: Restore adding parent filter to API query --- 
+        if "parent_record_ids" in query_params:
+            parent_ids = query_params["parent_record_ids"]
+            parent_field = query_params.get("parent_field", "AbsNr") 
+            parent_filter_part = [[parent_field, "=", pid] for pid in parent_ids]
+            final_filter_query.extend(parent_filter_part)
+            # has_parent_filter_batched = True # Flag not strictly needed now
+            logger.info(f"Adding parent filter for field '{parent_field}' (API query)")
         # --- END MODIFICATION ---
 
         # 3. Add date filters (send to API even if handled client-side)
@@ -494,18 +501,9 @@ class LegacyAPIExtractor(BaseExtractor):
                             date_filter = client_filters['date']
                             record_date_val = record.get(date_filter['key'])
                             if record_date_val is not None:
-                                # --- DEBUG: Log date values before comparison ---
-                                logger.debug(f"Record Date Value (raw): {record_date_val} (type: {type(record_date_val)})")
-                                logger.debug(f"Filter Key: {date_filter['key']}")
-                                logger.debug(f"Filter GTE: {date_filter['gte']}")
-                                logger.debug(f"Filter LTE: {date_filter['lte']}")
-                                # --- END DEBUG ---
                                 try:
                                     # Convert record date to naive datetime for comparison
                                     record_date = pd.to_datetime(record_date_val).tz_localize(None)
-                                    # --- DEBUG: Log parsed record date ---
-                                    logger.debug(f"Parsed Record Date (naive): {record_date}")
-                                    # --- END DEBUG ---
                                     
                                     if date_filter['gte'] and not (record_date >= date_filter['gte']):
                                         passes_filter = False
@@ -537,9 +535,13 @@ class LegacyAPIExtractor(BaseExtractor):
                             filtered_batch.append(record)
                     
                     logger.info(f"Client-side filtering: Received {batch_record_count} records, filtered down to {len(filtered_batch)} records.")
+                    
+                    # Convert date fields in the filtered batch before yielding
+                    self._parse_and_convert_dates(filtered_batch)
                     yield_list = filtered_batch
                 else:
-                    # No client filters defined, yield the raw batch
+                    # No client filters defined, yield the raw batch after date conversion
+                    self._parse_and_convert_dates(records_list)
                     yield_list = records_list
                     logger.debug("No client-side filters active, yielding raw batch.")
 
@@ -752,39 +754,66 @@ class LegacyAPIExtractor(BaseExtractor):
                 logger.warning(f"Failed to parse date input: {date_input}")
                 return None
 
-            # 2. Determine target time based on original type and end_of_day
-            target_time: time
+            # 2. Adjust time if needed
             if end_of_day:
-                # Use specific time for end of day
-                target_time = time(23, 59, 59)  
-            elif original_type is datetime:
-                # Preserve original time only for datetime inputs
-                target_time = naive_dt.time()  
-            else: # Default to start of day for date or string inputs
-                target_time = time.min
+                naive_dt = naive_dt.replace(hour=23, minute=59, second=59)
+            else:
+                # Default to start of day if not specified
+                # Ensure time components are zero for consistency
+                if not isinstance(date_input, datetime):
+                     # Only reset time if input was just a date or YYYY-MM-DD string
+                     naive_dt = naive_dt.replace(hour=0, minute=0, second=0, microsecond=0)
 
-            # 3. Combine date part with target time
-            final_naive_dt = datetime.combine(naive_dt.date(), target_time)
+            # 3. Convert naive datetime to aware UTC datetime
+            aware_dt = naive_dt.replace(tzinfo=timezone.utc)
 
-            # 4. Make aware in UTC
-            aware_dt = final_naive_dt.replace(tzinfo=timezone.utc)
-
-            # 5. Format as ISO 8601 with Z for UTC
+            # 4. Format to ISO 8601 with 'Z' suffix
             return aware_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         except (ValueError, TypeError) as e:
             logger.warning("Error formatting date '%s': %s", date_input, e)
             return None
 
+    def _parse_and_convert_dates(self, records: List[Dict[str, Any]]) -> None:
+        """Parse known date string fields into datetime.date objects in place."""
+        if not records:
+            return
+
+        for record in records:
+            for field in self.DATE_FIELDS_TO_CONVERT:
+                if field in record and isinstance(record[field], str):
+                    original_value = record[field]
+                    try:
+                        # Use the utility function for robust parsing
+                        parsed_date = parse_date_string(original_value)
+                        if parsed_date:
+                            record[field] = parsed_date # Store as datetime.date
+                        else:
+                            # Handle cases where parsing returns None (e.g., "0!0!0")
+                             record[field] = None
+                    except ValueError as e:
+                        logger.warning(
+                            f"Could not parse date string for field '{field}' " \
+                            f"with value '{original_value}' in record " \
+                            f"{record.get('AbsNr', 'N/A')}: {e}. Leaving as string.")
+                elif field in record and record[field] is None:
+                    # Ensure None remains None
+                    pass # No action needed
+                elif field in record:
+                     # If it's already a date/datetime, ensure it's a date object
+                     current_val = record[field]
+                     if isinstance(current_val, datetime):
+                         record[field] = current_val.date()
+                     elif isinstance(current_val, date):
+                         pass # Already a date object
+                     else:
+                          logger.warning(
+                              f"Unexpected type for field '{field}': " \
+                              f"{type(current_val)}. Expected str, date, or datetime. " \
+                              f"Leaving as is.")
+
     def _generate_cache_key(self, query_params=None):
-        """Generate a cache key based on table name and query params.
-        
-        Args:
-            query_params: Query parameters for filtering
-            
-        Returns:
-            A string cache key
-        """
+        """Generate a cache key based on config and query params."""
         # Create a sorted, deterministic representation of query_params
         if query_params:
             # Convert query_params to a sorted, deterministic string representation

@@ -714,10 +714,7 @@ class Command(BaseSyncCommand):
                             child_batches = (
                                 child_pipeline.extractor.extract_batched(
                                     query_params=child_batch_filters,
-                                    api_page_size=10000,
-                                    fail_on_filter_error=options.get(
-                                        "fail_on_filter_error", True
-                                    ),
+                                    api_page_size=10000
                                 )
                             )
                             for batch_data in child_batches:
@@ -731,9 +728,6 @@ class Command(BaseSyncCommand):
                             child_source_data = (
                                 child_pipeline.extractor.extract(
                                     query_params=child_batch_filters,
-                                    fail_on_filter_error=options.get(
-                                        "fail_on_filter_error", True
-                                    ),
                                 )
                             )
 
@@ -777,21 +771,28 @@ class Command(BaseSyncCommand):
                     # --- END CHILD PRE-PROCESSING ---
 
                     if child_source_data:
-                        # --- Filter child records by date as well ---
+                        # --- Filter child records by date as well --- # REMOVED
                         # Filter should now primarily work with date objects
-                        filtered_child_data = _apply_date_filter(
-                            child_source_data,
-                            date_filter_params,
-                            self.DATE_FILTER_FIELD, # Pass target field
-                        )
-                        logger.info(
-                            f"{log_prefix} Filtered "
-                            f"{len(child_source_data)} -> "
-                            f"{len(filtered_child_data)} child records "
-                            f"meeting date criteria for batch "
-                            f"{batch_index + 1}."
-                        )
+                        # filtered_child_data = _apply_date_filter(
+                        #     child_source_data,
+                        #     date_filter_params,
+                        #     self.DATE_FILTER_FIELD, # Pass target field
+                        # )
+                        # logger.info(
+                        #     f"{log_prefix} Filtered "
+                        #     f"{len(child_source_data)} -> "
+                        #     f"{len(filtered_child_data)} child records "
+                        #     f"meeting date criteria for batch "
+                        #     f"{batch_index + 1}."
+                        # )
                         # --- END CHILD FILTER ---
+
+                        # Use child_source_data directly, no date filtering needed here
+                        filtered_child_data = child_source_data
+                        logger.info(
+                             f"{log_prefix} Proceeding with {len(filtered_child_data)} "
+                             f"child records for batch {batch_index + 1} (no date filter applied)."
+                         )
 
                         if (
                             filtered_child_data
