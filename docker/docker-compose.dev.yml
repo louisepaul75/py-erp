@@ -170,12 +170,15 @@ services:
     networks:
       - pyerp-network
     restart: unless-stopped # Optional: Restart the service if it stops unexpectedly
+    volumes:
+      - zebra_day_etc:/usr/local/lib/python3.10/site-packages/zebra_day/etc
 
 volumes:
   pyerp_data:
   filebeat_data:
   es_data:
   node_modules_volume: {}
+  zebra_day_etc: {} # Define the named volume
 
 networks:
   pyerp-network:

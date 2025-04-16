@@ -57,10 +57,13 @@ services:
       # - ZDAY_START_OPTS=""
     networks:
       - default # Connect to the default bridge network for communication with pyerp
+    volumes:
+      - zebra_day_etc:/usr/local/lib/python3.10/site-packages/zebra_day/etc
 
 volumes:
   pyerp_data:
   es_data:
+  zebra_day_etc: {}
 
 networks:
   default:
