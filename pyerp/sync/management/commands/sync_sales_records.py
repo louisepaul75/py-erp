@@ -1,7 +1,7 @@
 """Management command to synchronize sales records from legacy ERP."""
 
 import traceback
-from datetime import datetime # Added for date parsing
+import datetime  # Use the datetime module directly
 
 from django.core.management.base import CommandError
 from django.utils import timezone
@@ -14,28 +14,39 @@ from .base_sync_command import BaseSyncCommand
 logger = get_logger(__name__)
 
 # Helper function to apply date filter
-def _apply_date_filter(records, filter_params):
-    """Applies a date filter (like modified_date >= X) to a list of records."""
+def _apply_date_filter(records, filter_params, target_date_field: str):
+    """Applies a date filter (like target_date_field >= X) to a list of records.
+    Assumes the target_date_field in records contains date/datetime objects or None.
+    """
     if not filter_params or "filter_query" not in filter_params:
-        return records # No filter to apply
+        return records  # No filter to apply
 
     date_filter = None
     for f in filter_params["filter_query"]:
         # Assuming format [field_name, operator, value] and operator '>='
-        # And the field is 'modified_date'
-        if len(f) == 3 and f[1] == ">=" and f[0] == BaseSyncCommand.DEFAULT_TIMESTAMP_FIELD:
+        # Check if the field matches the target date field for this command
+        if len(f) == 3 and f[1] == ">=" and f[0] == target_date_field:
             try:
-                # Parse the date string (YYYY-MM-DD)
+                # Parse the date string (YYYY-MM-DD) from the filter params
                 date_filter = {
                     "field": f[0],
-                    "threshold": datetime.strptime(f[2], "%Y-%m-%d").date(),
-                    "operator": f[1]
+                    "threshold": datetime.datetime.strptime(
+                        f[2], "%Y-%m-%d"
+                    ).date(),
+                    "operator": f[1],
                 }
-                logger.debug(f"Date filter identified for client-side application: {date_filter}")
-                break # Assuming only one date filter for now
+                logger.debug(
+                    "Date filter identified for client-side application: %s",
+                    date_filter,
+                )
+                break  # Assuming only one date filter for now
             except ValueError:
-                logger.warning(f"Could not parse date '{f[2]}' for client-side filtering. Skipping date filter.")
-                return records # Cannot apply filter if date is invalid
+                logger.warning(
+                    "Could not parse date '%s' for client-side filtering. "
+                    "Skipping date filter.",
+                    f[2],
+                )
+                return records  # Cannot apply filter if date is invalid
 
     if not date_filter:
         return records # No applicable date filter found
@@ -45,20 +56,138 @@ def _apply_date_filter(records, filter_params):
     threshold_date = date_filter["threshold"]
 
     for record in records:
-        record_date_str = record.get(field)
-        if not record_date_str:
-            continue # Skip records without the date field
+        record_date_value = record.get(field)
+        if not record_date_value:
+            continue  # Skip records without the date field
 
+        record_date = None
         try:
-            # Assuming date format in record is like 'YYYY-MM-DD...'
-            record_date = datetime.strptime(record_date_str.split('T')[0], "%Y-%m-%d").date()
-            if record_date >= threshold_date:
-                filtered_records.append(record)
-        except (ValueError, TypeError):
-            logger.warning(f"Could not parse date '{record_date_str}' in record for filtering. Skipping record: {record.get(Command.PARENT_LEGACY_KEY_FIELD, 'N/A')}")
-            continue # Skip records with unparseable dates
+            # --- Simplified: Assume date/datetime object or convertible ---
+            if isinstance(record_date_value, datetime.datetime):
+                record_date = record_date_value.date()
+            elif isinstance(record_date_value, datetime.date):
+                record_date = record_date_value
+            # Handle pd.Timestamp or similar duck-typed objects
+            elif hasattr(record_date_value, 'year') and \
+                 hasattr(record_date_value, 'month') and \
+                 hasattr(record_date_value, 'day'):
+                try:
+                    record_date = datetime.date(
+                        record_date_value.year,
+                        record_date_value.month,
+                        record_date_value.day,
+                    )
+                except (ValueError, TypeError):
+                    # Handle potential issues with year/month/day values
+                    logger.warning(
+                        "Could not convert object with date attributes to date "
+                        "for field '%s'. Value: %s. Skipping record: %s",
+                        field,
+                        record_date_value,
+                        record.get(Command.PARENT_LEGACY_KEY_FIELD, "N/A"),
+                    )
+                    continue
+            else:
+                # Log if unexpected type is encountered after pre-parsing
+                logger.warning(
+                    "Unexpected type '%s' found in date field '%s' during "
+                    "filtering. Value: %s. Skipping record: %s",
+                    type(record_date_value),
+                    field,
+                    record_date_value,
+                    record.get(Command.PARENT_LEGACY_KEY_FIELD, "N/A"),
+                )
+                continue
+            # --- End Simplified ---
 
-    logger.info(f"Applied client-side date filter: {len(records)} -> {len(filtered_records)} records.")
+            # Now compare dates
+            if record_date and record_date >= threshold_date:
+                filtered_records.append(record)
+
+        except (ValueError, TypeError) as e:
+            # Catch errors during string parsing or comparison
+            logger.warning(
+                "Error processing date value '%s' ('%s') in record for "
+                "filtering: %s. Skipping record: %s",
+                record_date_value,
+                type(record_date_value),
+                e,
+                # Use target_date_field for logging context if needed
+                record.get(Command.PARENT_LEGACY_KEY_FIELD, "N/A"),
+            )
+            continue # Skip records with problematic dates
+
+    logger.info(
+        "Applied client-side date filter: %d -> %d records.",
+        len(records),
+        len(filtered_records),
+    )
+
+    # --- Add logging for date range of filtered records ---
+    if filtered_records and date_filter:  # Ensure filter was active
+        min_date_found = None
+        max_date_found = None
+        field = date_filter["field"]
+
+        for record in filtered_records:
+            record_date_value = record.get(field)
+            if not record_date_value:
+                continue
+
+            record_date = None
+            try:
+                # --- Simplified conversion logic (repeated from above) ---
+                if isinstance(record_date_value, datetime.datetime):
+                    record_date = record_date_value.date()
+                elif isinstance(record_date_value, datetime.date):
+                    record_date = record_date_value
+                elif hasattr(record_date_value, 'year') and \
+                     hasattr(record_date_value, 'month') and \
+                     hasattr(record_date_value, 'day'):
+                    try:
+                        record_date = datetime.date(
+                            record_date_value.year,
+                            record_date_value.month,
+                            record_date_value.day,
+                        )
+                    except (ValueError, TypeError):
+                        continue # Skip if invalid date components
+                else:
+                     continue # Skip unexpected types for range check
+                # --- End Simplified ---
+
+                # Update min/max
+                if record_date:
+                    if min_date_found is None or record_date < min_date_found:
+                        min_date_found = record_date
+                    if max_date_found is None or record_date > max_date_found:
+                        max_date_found = record_date
+
+            except (ValueError, TypeError):
+                # Should not happen often if record passed filter
+                logger.warning(
+                    "Could not re-parse date '%s' for range check. "
+                    "Record ID: %s",
+                    record_date_value,
+                    record.get(Command.PARENT_LEGACY_KEY_FIELD, "N/A"),
+                )
+                continue
+
+        if min_date_found and max_date_found:
+            logger.info(
+                "Filtered records '%s' date range: %s to %s",
+                field,
+                min_date_found.strftime("%Y-%m-%d"),
+                max_date_found.strftime("%Y-%m-%d"),
+            )
+        elif min_date_found:  # Handle case with only one valid date
+            logger.info(
+                "Filtered records '%s' single date found: %s",
+                field,
+                min_date_found.strftime("%Y-%m-%d"),
+            )
+    # --- End logging for date range ---
+
     return filtered_records
 
 
@@ -73,12 +202,65 @@ class Command(BaseSyncCommand):
     CHILD_ENTITY_TYPE = "sales_record_items"
     CHILD_PARENT_LINK_FIELD = "AbsNr"  # Field in Belege_Pos linking to Belege
 
+    # --- Define the specific date field for --days filtering in this command ---
+    DATE_FILTER_FIELD = "Datum"
+
     def add_arguments(self, parser):
         """Add command arguments, inheriting from BaseSyncCommand."""
         super().add_arguments(parser)
         # No command-specific arguments needed for now
         # Base class handles: --full, --batch-size, --top, --filters, --debug,
         # --days, --fail-on-filter-error, --clear-cache
+
+    # --- Override build_query_params to use DATE_FILTER_FIELD ---
+    def build_query_params(self, options, mapping=None):
+        """Build query params using the command-specific date field."""
+        # Call the base method first
+        query_params = super().build_query_params(options, mapping)
+
+        # If a date filter was generated by the base method using the default
+        # field name ('modified_date'), remove it and regenerate it using
+        # the correct field name ('Datum').
+        if options.get("days") is not None and "filter_query" in query_params:
+            original_filter_query = query_params.get("filter_query", [])
+            new_filter_query = []
+            date_filter_value = None
+
+            # Find and remove the default date filter if present
+            for f in original_filter_query:
+                if (
+                    len(f) == 3
+                    and f[1] == ">="
+                    and f[0] == self.DEFAULT_TIMESTAMP_FIELD # Check default base field
+                ):
+                    date_filter_value = f[2] # Store the date value
+                    logger.debug(
+                        f"Removing default date filter based on "
+                        f"'{self.DEFAULT_TIMESTAMP_FIELD}' to replace with "
+                        f"'{self.DATE_FILTER_FIELD}' filter."
+                    )
+                else:
+                    new_filter_query.append(f) # Keep other filters
+
+            # If we found and removed the default filter, add the correct one
+            if date_filter_value is not None:
+                new_filter_query.append(
+                    [self.DATE_FILTER_FIELD, ">=", date_filter_value]
+                )
+                logger.debug(
+                    f"Added command-specific date filter: "
+                    f"['{self.DATE_FILTER_FIELD}', '>=', '{date_filter_value}']"
+                )
+
+            # Update query_params with the modified filter list
+            if new_filter_query:
+                query_params["filter_query"] = new_filter_query
+            elif "filter_query" in query_params:
+                # Remove empty filter_query list
+                del query_params["filter_query"]
+
+        return query_params
+    # --- End Override ---
 
     def handle(self, *args, **options):
         """Orchestrate the multi-stage sync process with batch processing."""
@@ -102,9 +284,11 @@ class Command(BaseSyncCommand):
                 entity_type=self.CHILD_ENTITY_TYPE
             )
         except CommandError as e:
-            self.stderr.write(self.style.ERROR(
-                f"{log_prefix} Failed to get required sync mappings: {e}"
-            ))
+            self.stderr.write(
+                self.style.ERROR(
+                    f"{log_prefix} Failed to get required sync mappings: {e}"
+                )
+            )
             raise CommandError(
                 "Sync cannot proceed without required mappings."
             ) from e
@@ -153,7 +337,8 @@ class Command(BaseSyncCommand):
                     if not (
                         len(f) == 3
                         and f[1] == ">="
-                        and f[0] == self.DEFAULT_TIMESTAMP_FIELD
+                        # Check against the command-specific date field
+                        and f[0] == self.DATE_FILTER_FIELD
                     )
                 ]
                 # If filter_query becomes empty, remove it
@@ -204,9 +389,51 @@ class Command(BaseSyncCommand):
                 f"{len(fetched_data_for_ids)} raw parent records."
             )
 
+            # --- PRE-PROCESS DATE FIELD (Datum) --- # noqa E501
+            logger.info(f"{log_prefix} Pre-processing '{self.DATE_FILTER_FIELD}' field...")
+            parsing_errors = 0
+            processed_count = 0
+            for record in fetched_data_for_ids:
+                date_str = record.get(self.DATE_FILTER_FIELD)
+                if isinstance(date_str, str):
+                    try:
+                        # Attempt to parse DD!MM!YYYY format
+                        parsed_date = datetime.datetime.strptime(
+                            date_str, "%d!%m!%Y"
+                        ).date()
+                        # *** Update the record dictionary in place ***
+                        record[self.DATE_FILTER_FIELD] = parsed_date
+                        processed_count += 1
+                    except (ValueError, TypeError):
+                        # Handle cases where field exists but isn't the expected format
+                        # Keep original value, maybe log a warning
+                        parsing_errors += 1
+                        record[self.DATE_FILTER_FIELD] = None # Set to None if invalid
+                        if parsing_errors < 10: # Log first few errors
+                            logger.warning(
+                                f"{log_prefix} Could not parse date string "
+                                f"'{date_str}' from field "
+                                f"'{self.DATE_FILTER_FIELD}'. Setting to None. "
+                                f"Record ID: {record.get(self.PARENT_LEGACY_KEY_FIELD, 'N/A')}"
+                            )
+                        elif parsing_errors == 10:
+                            logger.warning(f"{log_prefix} Further date parsing errors will be suppressed...")
+                elif date_str is not None:
+                     # It's not a string, might already be a date/datetime or None/NaT
+                     # Leave it as is for the filter function to handle
+                     pass
+
+            logger.info(
+                f"{log_prefix} Finished pre-processing '{self.DATE_FILTER_FIELD}'. "
+                f"{processed_count} values parsed, {parsing_errors} errors (set to None)."
+            )
+            # --- END PRE-PROCESSING ---
+
             # --- APPLY CLIENT-SIDE DATE FILTER ---
             filtered_parent_data = _apply_date_filter(
-                fetched_data_for_ids, date_filter_params
+                fetched_data_for_ids,
+                date_filter_params,
+                self.DATE_FILTER_FIELD, # Pass target field to helper
             )
             logger.info(
                 f"{log_prefix} Filtered to {len(filtered_parent_data)} "
@@ -481,7 +708,7 @@ class Command(BaseSyncCommand):
                     # Extract child records for this batch
                     child_source_data = []
                     with child_pipeline.extractor:
-                        # Assuming child extractor *might* support batching
+                        # Assuming child extractor might support batching
                         # If not, .extract() is likely fine here too
                         try:
                             child_batches = (
@@ -515,11 +742,47 @@ class Command(BaseSyncCommand):
                         f"child records for batch {batch_index + 1}."
                     )
 
+                    # --- PRE-PROCESS CHILD DATE FIELD (Datum) --- # noqa E501
+                    # Apply same parsing logic to child records
+                    child_parsing_errors = 0
+                    child_processed_count = 0
+                    for record in child_source_data:
+                        date_str = record.get(self.DATE_FILTER_FIELD)
+                        if isinstance(date_str, str):
+                            try:
+                                parsed_date = datetime.datetime.strptime(
+                                    date_str, "%d!%m!%Y"
+                                ).date()
+                                record[self.DATE_FILTER_FIELD] = parsed_date
+                                child_processed_count += 1
+                            except (ValueError, TypeError):
+                                child_parsing_errors += 1
+                                record[self.DATE_FILTER_FIELD] = None
+                                if child_parsing_errors < 10:
+                                    logger.warning(
+                                        f"{log_prefix} Could not parse child date string "
+                                        f"'{date_str}' from field "
+                                        f"'{self.DATE_FILTER_FIELD}'. Setting to None. "
+                                        f"Record Key: {record.get(child_pipeline.loader.config.get('unique_field', 'legacy_id'), 'N/A')}"
+                                    )
+                                elif child_parsing_errors == 10:
+                                    logger.warning(f"{log_prefix} Further child date parsing errors will be suppressed...")
+                        elif date_str is not None:
+                            pass # Leave non-strings as is
+                    if child_processed_count > 0 or child_parsing_errors > 0:
+                        logger.info(
+                            f"{log_prefix} Finished pre-processing child '{self.DATE_FILTER_FIELD}'. "
+                            f"{child_processed_count} values parsed, {child_parsing_errors} errors (set to None)."
+                        )
+                    # --- END CHILD PRE-PROCESSING ---
+
                     if child_source_data:
                         # --- Filter child records by date as well ---
-                        # Use the same date_filter_params derived earlier
+                        # Filter should now primarily work with date objects
                         filtered_child_data = _apply_date_filter(
-                            child_source_data, date_filter_params
+                            child_source_data,
+                            date_filter_params,
+                            self.DATE_FILTER_FIELD, # Pass target field
                         )
                         logger.info(
                             f"{log_prefix} Filtered "
