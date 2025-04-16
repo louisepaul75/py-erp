@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 # --- Load Environment Variables First ---
 # Ensure environment is set up before importing modules that need settings
 from pyerp.utils.env_loader import load_environment_variables
-load_environment_variables() # Load from default location
+load_environment_variables()  # Load from default location
 # --- End Environment Loading ---
 
 # Now import modules that might depend on Django settings

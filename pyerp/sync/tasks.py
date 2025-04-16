@@ -7,6 +7,7 @@ import yaml
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
+from datetime import timedelta
 
 try:
     from celery import shared_task
@@ -18,7 +19,7 @@ except ImportError:
 from celery.schedules import crontab
 from pyerp.utils.logging import get_logger, log_data_sync_event
 
-from .models import SyncMapping, SyncSource, SyncTarget
+from .models import SyncMapping, SyncSource, SyncTarget, SyncLog
 from .pipeline import PipelineFactory
 
 # Import necessary models and client
@@ -262,21 +263,25 @@ def run_full_sync() -> List[Dict]:
 
 @shared_task(name="sync.run_sales_record_sync")
 def run_sales_record_sync(
-    incremental: bool = True, batch_size: int = 100
+    incremental: bool = True, 
+    batch_size: int = 100,
+    days_to_sync: Optional[int] = None
 ) -> List[Dict]:
     """
     Run sync for sales records and their line items.
 
     Args:
-        incremental: If True, only sync records modified since last sync
-        batch_size: Number of records to process in each batch
+        incremental: If True, only sync records modified since last sync.
+        batch_size: Number of records to process in each batch.
+        days_to_sync: If provided, sync records from the last X days 
+                      (overrides incremental logic for date range).
 
     Returns:
         List of dicts with sync results
     """
     logger.info(
-        f"Starting {'incremental' if incremental else 'full'} "
-        f"sales record sync"
+        f"Starting sales record sync (Incremental: {incremental}, "
+        f"Days: {days_to_sync})"
     )
     log_data_sync_event(
         source="legacy_erp",
@@ -287,33 +292,105 @@ def run_sales_record_sync(
             "sync_type": "sales_records",
             "incremental": incremental,
             "batch_size": batch_size,
+            "days_to_sync": days_to_sync,
         },
     )
 
     results = []
 
-    # Get or create mappings
-    sales_record_mapping, sales_record_item_mapping = \
+    # Load mapping configurations from YAML first
+    sales_record_mapping_config, sales_record_item_mapping_config = \
         get_sales_record_mappings()
 
-    if not sales_record_mapping or not sales_record_item_mapping:
-        logger.info("Sales record mappings not found. Creating...")
-        sales_record_mapping, sales_record_item_mapping = \
-            create_sales_record_mappings()
+    if not sales_record_mapping_config or not sales_record_item_mapping_config:
+        logger.error(
+            "Failed to load sales record mapping configurations from YAML."
+        )
+        return [{"status": "error", "message": "YAML config load failed"}]
+
+    # Fetch the actual SyncMapping objects to get last sync time etc.
+    try:
+        sales_record_mapping = SyncMapping.objects.get(
+            entity_type=sales_record_mapping_config['entity_type'],
+            source__name=sales_record_mapping_config['source'],
+            target__name=sales_record_mapping_config['target']
+        )
+        sales_record_item_mapping = SyncMapping.objects.get(
+            entity_type=sales_record_item_mapping_config['entity_type'],
+            source__name=sales_record_item_mapping_config['source'],
+            target__name=sales_record_item_mapping_config['target']
+        )
+    except SyncMapping.DoesNotExist:
+        logger.error("SyncMapping objects not found in DB. Run initial setup?")
+        # Optionally try creating them here if that's desired flow
+        # sales_record_mapping, sales_record_item_mapping = \
+        #     create_sales_record_mappings()
+        # if not sales_record_mapping or not sales_record_item_mapping:
+        return [
+            {"status": "error", "message": "SyncMapping objects not found"}
+        ]
+    except Exception as e:
+        logger.error(f"Error fetching SyncMapping objects: {e}")
+        return [{"status": "error", "message": f"DB error: {e}"}]
+
+
+    # --- Determine Date Filter ---
+    sync_query_params = {}
+    start_date = None
+
+    if days_to_sync is not None and days_to_sync > 0:
+        start_date = timezone.now() - timedelta(days=days_to_sync)
+        logger.info(
+            f"Applying date filter: Syncing last {days_to_sync} days "
+            f"(since {start_date.isoformat()})"
+        )
+    elif incremental:
+        # Use the last successful sync time of the *parent* (SalesRecord) mapping
+        # Fallback to a default (e.g., 7 days) if no successful sync found?
+        last_sync_time = sales_record_mapping.last_successful_sync
+        if last_sync_time:
+            start_date = last_sync_time
+            logger.info(
+                f"Applying incremental date filter: Since "
+                f"{start_date.isoformat()}"
+            )
+        else:
+            # Fallback: Sync last 7 days if no previous successful sync
+            start_date = timezone.now() - timedelta(days=7)
+            logger.warning(
+                f"No last successful sync found for SalesRecord mapping. "
+                f"Defaulting to last 7 days (since {start_date.isoformat()})"
+            )
+    else:  # Full sync without days_to_sync
+        logger.info("Running full sync without date filter.")
+        # No date filter applied (start_date remains None)
+
+    if start_date:
+        # Assuming 'Datum' is the correct field in the legacy API
+        # The extractor expects {'field': {'operator': value}}
+        # Note: Extractor formats the date value based on operator
+        sync_query_params['Datum'] = {'gte': start_date}
+    # --- End Determine Date Filter ---
+
 
     # Sync sales records
     if sales_record_mapping:
         logger.info(
-            f"Running sales record sync (mapping ID: {sales_record_mapping.id})"
+            f"Running sales record sync (mapping ID: "
+            f"{sales_record_mapping.id})"
         )
         record_result = run_entity_sync(
             mapping_id=sales_record_mapping.id,
-            incremental=incremental,
+            incremental=incremental,  # Keep for logging/potential future use
             batch_size=batch_size,
+            query_params=sync_query_params  # Pass the constructed params
         )
         results.append(record_result)
 
-    # Sync line items
+    # Sync line items - Reuse the same query params (date filter)
+    # Assumes line items don't have their own date field to filter by directly
+    # and are implicitly filtered by their parent's date.
+    # If items *do* have a filterable date, adjust params here.
     if sales_record_item_mapping:
         logger.info(
             f"Running sales record line item sync "
@@ -323,6 +400,7 @@ def run_sales_record_sync(
             mapping_id=sales_record_item_mapping.id,
             incremental=incremental,
             batch_size=batch_size,
+            query_params=sync_query_params  # Pass the same params
         )
         results.append(item_result)
 

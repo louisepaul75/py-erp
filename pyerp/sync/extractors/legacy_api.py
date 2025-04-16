@@ -1,9 +1,11 @@
 """Legacy API data extractor implementation."""
 
 import os
+import json
+import logging # Import logging
 from datetime import datetime, time, timezone, date
 from typing import Any, Dict, List, Optional
-import json
+import pandas as pd
 
 from pyerp.external_api.legacy_erp import LegacyERPClient
 from pyerp.utils.logging import get_logger, log_data_sync_event
@@ -11,8 +13,19 @@ from pyerp.sync.exceptions import ExtractError
 
 from .base import BaseExtractor
 
+# Configure logger for this module
+logger = logging.getLogger("pyerp.sync.extractors.legacy_api")
+logger.setLevel(logging.DEBUG)  # Ensure DEBUG level is set
 
-logger = get_logger(__name__)
+# Add console handler if not already present (to ensure output)
+if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter("%(name)s - %(levelname)s - %(message)s")
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+    logger.propagate = False  # Prevent duplicate messages from root logger
+
 
 # Add a response cache to the LegacyAPIExtractor class
 _response_cache = {}
@@ -57,7 +70,8 @@ class LegacyAPIExtractor(BaseExtractor):
             env_value = os.environ.get("LEGACY_ERP_ENVIRONMENT")
             if env_value:
                 logger.info(
-                    f"Using environment variable LEGACY_ERP_ENVIRONMENT: {env_value}"
+                    f"Using environment variable LEGACY_ERP_ENVIRONMENT: "
+                    f"{env_value}"
                 )
                 self.config["environment"] = env_value
 
@@ -65,7 +79,8 @@ class LegacyAPIExtractor(BaseExtractor):
             env_value = os.environ.get("LEGACY_ERP_TABLE_NAME")
             if env_value:
                 logger.info(
-                    f"Using environment variable LEGACY_ERP_TABLE_NAME: {env_value}"
+                    f"Using environment variable LEGACY_ERP_TABLE_NAME: "
+                    f"{env_value}"
                 )
                 self.config["table_name"] = env_value
 
@@ -126,7 +141,8 @@ class LegacyAPIExtractor(BaseExtractor):
         if "parent_record_ids" in query_params:
             parent_ids = query_params["parent_record_ids"]
             logger.info(
-                f"Filtering by parent record IDs: {len(parent_ids)} IDs provided"
+                f"Filtering by parent record IDs: "
+                f"{len(parent_ids)} IDs provided"
             )
             parent_field = query_params.get("parent_field", "AbsNr")
             if len(parent_ids) == 1:
@@ -137,7 +153,8 @@ class LegacyAPIExtractor(BaseExtractor):
                 ]
             if parent_filter:
                 logger.info(
-                    f"Created parent filter with {len(parent_filter)} conditions"
+                    f"Created parent filter with {len(parent_filter)} "
+                    f"conditions"
                 )
 
         # Generate a cache key based on table name and query params
@@ -159,7 +176,7 @@ class LegacyAPIExtractor(BaseExtractor):
 
             # --- Build final filter_query --- 
             final_filter_query = []
-            has_parent_filter = bool(parent_filter) # Check if parent filter exists
+            has_parent_filter = bool(parent_filter)  # Check if parent filter exists
 
             # 1. Get base filter from query_params["filter_query"]
             base_filter = query_params.get("filter_query")
@@ -179,7 +196,9 @@ class LegacyAPIExtractor(BaseExtractor):
             # 3. Add date filters ONLY IF no parent filter is applied
             if not has_parent_filter:
                 for date_key in self.KNOWN_DATE_KEYS:
-                    if date_key in query_params and isinstance(query_params[date_key], dict):
+                    if date_key in query_params and isinstance(
+                        query_params[date_key], dict
+                    ):
                         date_filter_dict = query_params[date_key]
                         date_conditions = self._build_date_filter_query(
                             date_key, date_filter_dict
@@ -192,7 +211,9 @@ class LegacyAPIExtractor(BaseExtractor):
                             final_filter_query.extend(date_conditions)
                         break  # Assume only one date filter key is used per query
             else:
-                logger.info("Skipping date filters as parent ID filter is active.")
+                logger.info(
+                    "Skipping date filters as parent ID filter is active."
+                    )
 
             # Determine pagination settings
             top = query_params.get("$top")  # Can be None
@@ -204,7 +225,8 @@ class LegacyAPIExtractor(BaseExtractor):
             records = client.fetch_table(
                 table_name=table_name,
                 all_records=all_records,
-                filter_query=final_filter_query if final_filter_query else None,
+                filter_query=final_filter_query 
+                if final_filter_query else None,
                 top=top
             )
 
@@ -213,7 +235,8 @@ class LegacyAPIExtractor(BaseExtractor):
                 try:
                     result = records.to_dict(orient="records")
                     logger.info(
-                        f"Converted DataFrame to {len(result)} dictionary records"
+                        f"Converted DataFrame to {len(result)} dictionary "
+                        f"records"
                     )
 
                     # Store in cache for future use
@@ -243,7 +266,7 @@ class LegacyAPIExtractor(BaseExtractor):
                 raise ExtractError(f"Extraction failed: {e}")
             return []
 
-    def extract_batched(self, batch_size: int = 100, query_params: Optional[Dict[str, Any]] = None):
+    def extract_batched(self, batch_size: int = 10000, query_params: Optional[Dict[str, Any]] = None):
         """
         Extract data from the API in batches using pagination.
 
@@ -263,22 +286,70 @@ class LegacyAPIExtractor(BaseExtractor):
         query_params = query_params or {}
         skip = 0
         processed_records = 0
-        # Remove $top if present, handle limit within the loop
-        # Keep original $top if user wants to limit overall results
         top_limit = None
         if "$top" in query_params:
-             top_limit = int(query_params.pop("$top")) # Remove from params passed to fetch_table
-             logger.info(f"Applying overall top limit of {top_limit} to batched extraction.")
-
+             top_limit = int(query_params.pop("$top"))  # Remove from params passed to fetch_table
+             logger.info(
+                 f"Applying overall top limit of {top_limit} "
+                 f"to batched extraction."
+             )
 
         logger.info(
-            f"Starting batched extraction from {table_name} with batch size {batch_size}"
+            f"Starting batched extraction from {table_name} "
+            f"with batch size {batch_size}"
         )
 
-        # --- Build base filter query (excluding pagination params) ---
-        # Reuse filter building logic but apply it once before looping
+        # --- Client-Side Filtering Setup ---
+        client_filters = {}
+        # Extract date filters for client-side check
+        filter_date_key = None
+        filter_date_gte = None
+        filter_date_lte = None
+        for date_key in self.KNOWN_DATE_KEYS:
+            if date_key in query_params and isinstance(query_params[date_key], dict):
+                filter_date_key = date_key
+                date_filter_dict = query_params[date_key]
+                if 'gte' in date_filter_dict:
+                    filter_date_gte = pd.to_datetime(date_filter_dict['gte']).tz_localize(None)
+                    logger.info(f"Client-side filter: {date_key} >= {filter_date_gte}")
+                elif 'gt' in date_filter_dict: # Also consider gt
+                     # Convert gt to gte for easier comparison logic
+                     filter_date_gte = pd.to_datetime(date_filter_dict['gt']).tz_localize(None) + pd.Timedelta(seconds=1)
+                     logger.info(f"Client-side filter (from gt): {date_key} >= {filter_date_gte}")
+
+                if 'lte' in date_filter_dict:
+                    filter_date_lte = pd.to_datetime(date_filter_dict['lte']).tz_localize(None)
+                    logger.info(f"Client-side filter: {date_key} <= {filter_date_lte}")
+                elif 'lt' in date_filter_dict:
+                    # Convert lt to lte for easier comparison logic
+                    filter_date_lte = pd.to_datetime(date_filter_dict['lt']).tz_localize(None) - pd.Timedelta(seconds=1)
+                    logger.info(f"Client-side filter (from lt): {date_key} <= {filter_date_lte}")
+                
+                client_filters['date'] = {
+                    'key': filter_date_key,
+                    'gte': filter_date_gte,
+                    'lte': filter_date_lte
+                }
+                # Assuming only one primary date key is used for filtering
+                break 
+
+        # Extract parent ID filter for client-side check
+        filter_parent_ids = None
+        filter_parent_field = None
+        if "parent_record_ids" in query_params:
+            filter_parent_ids = set(query_params["parent_record_ids"]) # Use set for faster lookups
+            filter_parent_field = query_params.get("parent_field", "AbsNr")
+            client_filters['parent'] = {
+                'key': filter_parent_field,
+                'ids': filter_parent_ids
+            }
+            logger.info(f"Client-side filter: {filter_parent_field} in {len(filter_parent_ids)} IDs")
+
+        # --- Build API filter query (still send original, might help slightly) ---
+        # We keep this logic to send the filter to the API, even if it doesn't 
+        # handle it correctly with pagination. It might reduce some data transfer.
         final_filter_query = []
-        has_parent_filter_batched = False # Check if parent filter exists
+        has_parent_filter_batched = False
 
         # 1. Get base filter from query_params["filter_query"]
         base_filter = query_params.get("filter_query")
@@ -287,40 +358,38 @@ class LegacyAPIExtractor(BaseExtractor):
                 final_filter_query.extend(base_filter)
             else:
                 logger.warning(
-                    f"Expected list for filter_query, got {type(base_filter)}. Ignoring."
+                    f"Expected list for filter_query, got "
+                    f"{type(base_filter)}. Ignoring."
                 )
-        # 2. Add parent filter (if applicable in this context)
-        # Ensure parent_record_ids logic is appropriate here. If it filters based on
-        # already known IDs, it might not be suitable for initial customer fetching,
-        # but could be used if fetching related data in batches.
+        # 2. Add parent filter 
         if "parent_record_ids" in query_params:
             parent_ids = query_params["parent_record_ids"]
-            logger.info(
-                f"Applying parent record ID filter (batched): {len(parent_ids)} IDs"
-            )
-            parent_field = query_params.get("parent_field", "AbsNr") # Use appropriate field
+            parent_field = query_params.get("parent_field", "AbsNr") 
             parent_filter_part = [[parent_field, "=", pid] for pid in parent_ids]
-            # If there are many parent IDs, the filter might become too large.
-            # The API client or endpoint needs to handle potentially large 'OR' conditions.
-            # Consider if this filter type is compatible with efficient batching.
             final_filter_query.extend(parent_filter_part)
-            has_parent_filter_batched = True # Set flag if parent filter is added
+            has_parent_filter_batched = True  
 
-        # 3. Add date filters ONLY IF no parent filter is applied
-        if not has_parent_filter_batched:
-            for date_key in self.KNOWN_DATE_KEYS:
-                # Allow multiple date keys if they are in query_params and KNOWN_DATE_KEYS
-                if date_key in query_params and isinstance(query_params[date_key], dict):
-                    date_filter_dict = query_params[date_key]
-                    date_conditions = self._build_date_filter_query(
-                        date_key, date_filter_dict
+        # 3. Add date filters (send to API even if handled client-side)
+        # if not has_parent_filter_batched: # Keep sending date filter regardless? Or respect the old logic?
+        # Let's keep sending date filter even with parent filter for now.
+        for date_key in self.KNOWN_DATE_KEYS:
+            if date_key in query_params and isinstance(
+                query_params[date_key], dict
+            ):
+                date_filter_dict = query_params[date_key]
+                date_conditions = self._build_date_filter_query(
+                    date_key, date_filter_dict
+                )
+                if date_conditions:
+                    logger.info(
+                        f"Adding date filter for key '{date_key}' "
+                        f"(API query): {date_conditions}"
                     )
-                    if date_conditions:
-                        logger.info(
-                            f"Adding date filter for key '{date_key}' (batched): {date_conditions}"
-                        )
-                        final_filter_query.extend(date_conditions)
+                    final_filter_query.extend(date_conditions)
                     # Removed break to allow multiple date filters if needed
+
+        # --- Log Initial Filter --- 
+        logger.info(f"API filter query for batching: {final_filter_query}")
 
         # --- Pagination loop ---
         while True:
@@ -329,13 +398,17 @@ class LegacyAPIExtractor(BaseExtractor):
             if top_limit is not None:
                 remaining = top_limit - processed_records
                 if remaining <= 0:
-                    logger.info(f"Reached overall top limit of {top_limit}. Stopping batch fetch.")
+                    logger.info(
+                        f"Reached overall top limit of {top_limit}. "
+                        f"Stopping batch fetch."
+                    )
                     break
                 # Request only the remaining number if it's less than the full batch size
                 current_batch_size = min(batch_size, remaining)
 
             logger.debug(
-                f"Fetching batch: table={table_name}, skip={skip}, top={current_batch_size}"
+                f"Fetching batch: table={table_name}, skip={skip}, "
+                f"top={current_batch_size}"
             )
             try:
                 # Assuming fetch_table supports skip and top for pagination
@@ -343,72 +416,161 @@ class LegacyAPIExtractor(BaseExtractor):
                 # Pass the pre-built filter_query
                 batch = client.fetch_table(
                     table_name=table_name,
-                    all_records=False, # Explicitly disable fetching all records
-                    filter_query=final_filter_query if final_filter_query else None,
+                    all_records=False,  # Explicitly disable fetching all records
+                    filter_query=final_filter_query 
+                    if final_filter_query else None,
                     skip=skip,
                     top=current_batch_size
-                    # Pass other relevant params from query_params if needed, e.g., select, orderby
+                    # Pass other relevant params from query_params if needed,
+                    # e.g., select, orderby
                     # select=query_params.get('$select'),
                     # orderby=query_params.get('$orderby')
                 )
 
                 # Check if batch is None or empty list/DataFrame
                 if batch is None:
-                    logger.warning(f"Received None batch for skip={skip}, top={current_batch_size}. Stopping.")
+                    logger.warning(
+                        f"Received None batch for skip={skip}, "
+                        f"top={current_batch_size}. Stopping."
+                    )
                     break
 
                 # Convert to list of dicts if necessary
                 records_list = []
                 batch_record_count = 0
-                if hasattr(batch, 'empty') and batch.empty: # Handle empty DataFrame
-                     logger.debug(f"Received empty DataFrame batch for skip={skip}.")
-                     batch_record_count = 0
-                     records_list = []
+                if hasattr(batch, 'empty') and batch.empty:  # Handle empty DataFrame
+                    logger.debug(f"Received empty DataFrame batch for skip={skip}.")
+                    batch_record_count = 0
+                    records_list = []
                 elif hasattr(batch, 'to_dict') and callable(batch.to_dict):
-                     try:
-                         records_list = batch.to_dict(orient="records")
-                         batch_record_count = len(records_list)
-                     except Exception as e:
-                         logger.error(f"Error converting DataFrame batch: {e}. Stopping batch fetch.")
-                         raise ExtractError(f"Data conversion failed during batch fetch (skip={skip}): {e}") from e
+                    try:
+                        records_list = batch.to_dict(orient="records")
+                        batch_record_count = len(records_list)
+                    except Exception as e:
+                        logger.error(
+                            f"Error converting DataFrame batch: {e}. "
+                            f"Stopping batch fetch."
+                         )
+                        break # Stop processing if conversion fails
+
+                    # Handle case where conversion results in an empty list
+                    if not records_list:
+                       logger.debug(f"Converted DataFrame batch is empty for skip={skip}.")
+                       batch_record_count = 0
                 elif isinstance(batch, list):
                     records_list = batch
                     batch_record_count = len(records_list)
                 else:
-                    logger.error(f"Received unexpected batch type: {type(batch)}. Stopping batch fetch.")
-                    raise ExtractError(f"Unexpected data type received during batch fetch (skip={skip})")
-
-
-                logger.debug(f"Fetched batch of {batch_record_count} records.")
-
-                # If the API returns an empty list/DataFrame, assume end of data
-                if not batch_record_count:
-                    logger.info(f"Received empty batch for skip={skip}. Assuming end of data.")
+                    logger.warning(
+                        f"Received unexpected batch type: {type(batch)}. "
+                        f"Stopping batch fetch."
+                    )
                     break
 
-                yield records_list
-                processed_records += batch_record_count
-                skip += batch_record_count # Use actual count for next skip
-
-                # Check if the API returned fewer records than requested (and we didn't hit a top_limit)
-                # This is a common way to detect the last page.
-                if batch_record_count < current_batch_size and (top_limit is None or processed_records < top_limit):
-                    logger.info(f"Received fewer records ({batch_record_count}) than requested ({current_batch_size}). Assuming end of data.")
-                    break
-
-            except Exception as e:
-                # Catch potential errors from fetch_table or processing
-                logger.error(
-                    f"Error during batched extraction from {table_name} "
-                    f"(skip={skip}, top={current_batch_size}): {e}", exc_info=True # Log traceback
+                logger.debug(
+                    f"Received raw batch of {batch_record_count} records "
+                    f"for skip={skip}, top={current_batch_size}"
                 )
-                # Decide whether to continue or raise based on requirements
-                # Raising an error halts the sync process on batch failure
+
+                # --- Apply Client-Side Filtering ---
+                filtered_batch = []
+                if client_filters and records_list:
+                    for record in records_list:
+                        passes_filter = True
+
+                        # Check date filter
+                        if 'date' in client_filters:
+                            date_filter = client_filters['date']
+                            record_date_val = record.get(date_filter['key'])
+                            if record_date_val is not None:
+                                try:
+                                    # Convert record date to naive datetime for comparison
+                                    record_date = pd.to_datetime(record_date_val).tz_localize(None)
+                                    
+                                    if date_filter['gte'] and not (record_date >= date_filter['gte']):
+                                        passes_filter = False
+                                    if passes_filter and date_filter['lte'] and not (record_date <= date_filter['lte']):
+                                         passes_filter = False
+                                except (ValueError, TypeError) as date_err:
+                                     logger.warning(f"Could not parse date '{record_date_val}' in record for filtering key '{date_filter['key']}': {date_err}. Skipping record.")
+                                     passes_filter = False # Treat parse error as filter fail for this record
+                            else:
+                                # Decide how to handle missing date key: fail filter or allow?
+                                # For now, let's fail the filter if the key is expected but missing.
+                                logger.warning(f"Date filter key '{date_filter['key']}' missing in record. Failing filter for record.")
+                                passes_filter = False 
+                        
+                        # Check parent ID filter
+                        if passes_filter and 'parent' in client_filters:
+                            parent_filter = client_filters['parent']
+                            record_parent_val = record.get(parent_filter['key'])
+                            if record_parent_val is None or record_parent_val not in parent_filter['ids']:
+                                passes_filter = False
+
+                        # Add more client-side filters here if needed...
+
+                        if passes_filter:
+                            filtered_batch.append(record)
+                    
+                    logger.info(f"Client-side filtering: Received {batch_record_count} records, filtered down to {len(filtered_batch)} records.")
+                    yield_list = filtered_batch
+                else:
+                    # No client filters defined, yield the raw batch
+                    yield_list = records_list
+                    logger.debug("No client-side filters active, yielding raw batch.")
+
+
+                # Yield the filtered batch
+                if yield_list:
+                    yield yield_list
+                    processed_records += len(yield_list) # Count processed AFTER filtering
+                else:
+                    # If the filtered batch is empty, but the raw batch wasn't, 
+                    # continue fetching pages in case later pages have matching data.
+                    # However, if the *raw* batch was empty or smaller than requested,
+                    # the API is done sending data, so we should break.
+                    if not batch_record_count:
+                        logger.info(
+                            "Received empty batch from API (or conversion failed). "
+                            "Stopping batch fetch."
+                        )
+                        break
+                    if batch_record_count < current_batch_size:
+                        logger.info(
+                            f"Received last batch from API ({batch_record_count} < "
+                            f"{current_batch_size}). Stopping batch fetch."
+                        )
+                        break
+                    # Continue loop if filtered batch is empty but raw batch was full
+
+                # Check if the API returned fewer records than requested, indicating the end
+                if batch_record_count < current_batch_size:
+                    logger.info(
+                        f"Received last batch ({batch_record_count} < "
+                        f"{current_batch_size}). Stopping pagination."
+                    )
+                    break
+
+                # Prepare for the next batch
+                skip += batch_size # Increment skip by the requested batch size, not the filtered count
+
+            except ExtractError as e:
+                logger.error(f"Extraction error during batch fetch: {e}")
+                raise  # Re-raise the specific error
+            except Exception as e:
+                logger.error(
+                    f"Unexpected error during batch fetch "
+                    f"(table: {table_name}, skip: {skip}): {e}"
+                )
+                # Depending on requirements, maybe raise ExtractError or just log
                 raise ExtractError(
-                    f"Extraction failed during batch fetch (skip={skip}): {e}"
+                    f"Unexpected error during batch fetch: {e}"
                 ) from e
 
-        logger.info(f"Finished batched extraction from {table_name}. Total records processed: {processed_records}")
+        logger.info(
+            f"Finished batched extraction from {table_name}. "
+            f"Total records yielded after filtering: {processed_records}"
+        )
 
     def _build_date_filter_query(self, date_key: str, date_filter_dict: Dict[str, Any]) -> List[List[str]]:
         """Build a filter query list for date-based filtering."""
@@ -427,28 +589,81 @@ class LegacyAPIExtractor(BaseExtractor):
             'lt': '<',
             'lte': '<=',
             'eq': '=',
-            'ge': '>=',
-            'le': '<='
+            'ge': '>=',  # Alias for gte
+            'le': '<='   # Alias for lte
         }
 
         for op_key, date_value in date_filter_dict.items():
             api_op = operator_map.get(op_key)
             if not api_op:
                 logger.warning(
-                    "Unknown date filter operator '%s' for key '%s', skipping.",
-                    op_key, date_key
+                    f"Unknown date filter operator '{op_key}' for key "
+                    f"'{date_key}', skipping."
                 )
                 continue
 
-            # Determine if this is an end-of-day comparison
-            is_end_of_day = op_key in ('lt', 'lte', 'le')
-            formatted_date = self._format_date_for_api(date_value, is_end_of_day)
-            if formatted_date is None: # Handle formatting errors
+            formatted_date: Optional[str] = None
+            try:
+                # --- Start: Use YYYY-MM-DD format for >= and <= --- 
+                if api_op in ('>=', '<='):
+                    # Convert input to date object if needed
+                    if isinstance(date_value, datetime):
+                        date_obj = date_value.date()
+                    elif isinstance(date_value, date):
+                        date_obj = date_value
+                    elif isinstance(date_value, str):
+                        # Try parsing common ISO formats
+                        try:
+                            date_obj = datetime.fromisoformat(
+                                date_value.replace("Z", "+00:00")
+                            ).date()
+                        except ValueError:
+                            date_obj = datetime.strptime(
+                                date_value, "%Y-%m-%d"
+                            ).date()
+                    else:
+                        raise TypeError(
+                            f"Unsupported type for date conversion: "
+                            f"{type(date_value)}"
+                        )
+                    
+                    formatted_date = date_obj.strftime("%Y-%m-%d")
+                    logger.debug(
+                        f"Using simple date format '{formatted_date}' "
+                        f"for operator '{api_op}'"
+                    )
+                # --- End: Use YYYY-MM-DD format for >= and <= ---
+                else:
+                    # For other operators (like eq, gt, lt), 
+                    # use the full timestamp format
+                    # Note: Tests indicate gt/lt might not work reliably 
+                    # with the API
+                    is_end_of_day = api_op in ('<', '<=')  # Use end of day only for lt/le
+                    formatted_date = self._format_date_for_api(
+                        date_value, is_end_of_day
+                    )
+                    if formatted_date:
+                        logger.debug(
+                             f"Using full timestamp format '{formatted_date}' "
+                             f"for operator '{api_op}'"
+                         )
+
+            except (ValueError, TypeError) as e:
                 logger.warning(
-                    "Could not format date value '%s' for key '%s' and op '%s', skipping filter.",
-                    date_value, date_key, op_key
-                )
+                     f"Could not format/convert date value '{date_value}' "
+                     f"for key '{date_key}' and op '{op_key}', skipping filter. "
+                     f"Error: {e}",
+                 )
+                continue  # Skip this specific filter condition
+
+            # Ensure formatting succeeded before appending
+            if formatted_date is None:
+                logger.warning(
+                     f"Date formatting resulted in None for key '{date_key}' "
+                     f"and op '{op_key}', skipping filter.",
+                 )
                 continue
+
             filter_query.append([date_key, api_op, formatted_date])
 
         return filter_query
@@ -463,7 +678,8 @@ class LegacyAPIExtractor(BaseExtractor):
             end_of_day: If True, set the time to 23:59:59 for the given date.
 
         Returns:
-            Formatted ISO 8601 UTC string (e.g., "YYYY-MM-DDTHH:MM:SSZ") or None if formatting fails.
+            Formatted ISO 8601 UTC string 
+            (e.g., "YYYY-MM-DDTHH:MM:SSZ") or None if formatting fails.
         """
         naive_dt: Optional[datetime] = None
         original_type = type(date_input)
@@ -471,42 +687,56 @@ class LegacyAPIExtractor(BaseExtractor):
             # 1. Parse input into naive datetime
             if isinstance(date_input, datetime):
                 # If already datetime, check if naive or aware
-                if date_input.tzinfo is None or date_input.tzinfo.utcoffset(date_input) is None:
-                    naive_dt = date_input # Already naive
+                if (date_input.tzinfo is None or 
+                        date_input.tzinfo.utcoffset(date_input) is None):
+                    naive_dt = date_input  # Already naive
                 else:
                     # Convert aware to naive UTC datetime first
-                    naive_dt = date_input.astimezone(timezone.utc).replace(tzinfo=None)
+                    naive_dt = date_input.astimezone(timezone.utc).replace(
+                        tzinfo=None
+                    )
             elif isinstance(date_input, date):
                 # Combine date with min time
                 naive_dt = datetime.combine(date_input, time.min)
             elif isinstance(date_input, str):
                 # Try parsing common ISO formats
                 try:
-                    parsed_dt = datetime.fromisoformat(date_input.replace("Z", "+00:00"))
-                    if parsed_dt.tzinfo is None or parsed_dt.tzinfo.utcoffset(parsed_dt) is None:
-                         naive_dt = parsed_dt
+                    parsed_dt = datetime.fromisoformat(
+                        date_input.replace("Z", "+00:00")
+                    )
+                    if (parsed_dt.tzinfo is None or 
+                            parsed_dt.tzinfo.utcoffset(parsed_dt) is None):
+                        naive_dt = parsed_dt
                     else:
-                         naive_dt = parsed_dt.astimezone(timezone.utc).replace(tzinfo=None)
+                        naive_dt = parsed_dt.astimezone(timezone.utc).replace(
+                            tzinfo=None
+                        )
                 except ValueError:
                      # Fallback for YYYY-MM-DD format
-                    parsed_date = datetime.strptime(date_input, "%Y-%m-%d").date()
+                    parsed_date = datetime.strptime(
+                        date_input, "%Y-%m-%d"
+                    ).date()
                     naive_dt = datetime.combine(parsed_date, time.min)
             else:
-                logger.warning("Unsupported date type for formatting: %s", type(date_input))
+                logger.warning(
+                    f"Unsupported date type for formatting: {type(date_input)}"
+                    )
                 return None
 
-            if naive_dt is None: # Should not happen if parsing worked
-                 logger.warning("Failed to parse date input: %s", date_input)
-                 return None
+            if naive_dt is None:  # Should not happen if parsing worked
+                logger.warning(f"Failed to parse date input: {date_input}")
+                return None
 
             # 2. Determine target time based on original type and end_of_day
             target_time: time
             if end_of_day:
-                target_time = time(23, 59, 59) # Use specific time for end of day
+                # Use specific time for end of day
+                target_time = time(23, 59, 59)  
             elif original_type is datetime:
-                target_time = naive_dt.time() # Preserve original time only for datetime inputs
+                # Preserve original time only for datetime inputs
+                target_time = naive_dt.time()  
             else: # Default to start of day for date or string inputs
-                 target_time = time.min
+                target_time = time.min
 
             # 3. Combine date part with target time
             final_naive_dt = datetime.combine(naive_dt.date(), target_time)

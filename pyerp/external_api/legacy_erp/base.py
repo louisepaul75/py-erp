@@ -640,7 +640,7 @@ class BaseAPIClient:
 
             all_fetched_records = []
             current_skip = skip
-            page_size = top if top is not None else 100  # Use top as page size or default
+            page_size = top if top is not None else 10000  # Use top as page size or default to 10000
 
             while True:
                 params = {"$skip": current_skip}
