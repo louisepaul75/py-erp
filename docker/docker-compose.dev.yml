@@ -41,6 +41,13 @@ services:
         chmod 750 /var/lib/redis &&
         # Run the static directories setup script
         bash /app/docker/ensure_static_dirs.sh &&
+        # Run the frontend dependencies setup script
+        echo 'Ensuring frontend dependencies are installed...' &&
+        if [ -f /app/docker/ensure_frontend_deps.sh ]; then 
+          chmod +x /app/docker/ensure_frontend_deps.sh && bash /app/docker/ensure_frontend_deps.sh ;
+        else 
+          echo 'Warning: /app/docker/ensure_frontend_deps.sh not found.' ;
+        fi &&
         # Configure Filebeat to ship logs to monitoring container
         echo 'Configuring Filebeat to ship logs to monitoring container...' &&
         if [ -f /usr/bin/filebeat ]; then
@@ -149,6 +156,20 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+
+  zebra-day:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.zebra_day
+    container_name: zebra-day-dev
+    ports:
+      - "8118:8118" # Map host port 8118 to container port 8118 for UI/API access
+    # environment:
+      # Optional: Override startup options if needed, e.g., remove --no-probe
+      # - ZDAY_START_OPTS=""
+    networks:
+      - pyerp-network
+    restart: unless-stopped # Optional: Restart the service if it stops unexpectedly
 
 volumes:
   pyerp_data:

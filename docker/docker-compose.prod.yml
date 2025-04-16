@@ -28,6 +28,7 @@ services:
       - es_data:/var/lib/elasticsearch
     networks:
       - default
+      - supabase_default # Connect to the external Supabase network
     dns_search: .
     healthcheck:
       test: curl --fail http://localhost:8000/admin/ || exit 1
@@ -44,6 +45,19 @@ services:
         /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf
       "
 
+  zebra-day:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.zebra_day
+    container_name: zebra-day-prod
+    restart: always
+    # No ports exposed externally by default in prod, only accessible within the docker network
+    # environment:
+      # Optional: Override startup options if needed
+      # - ZDAY_START_OPTS=""
+    networks:
+      - default # Connect to the default bridge network for communication with pyerp
+
 volumes:
   pyerp_data:
   es_data:
@@ -51,3 +65,5 @@ volumes:
 networks:
   default:
     driver: bridge
+  supabase_default:
+    external: true
