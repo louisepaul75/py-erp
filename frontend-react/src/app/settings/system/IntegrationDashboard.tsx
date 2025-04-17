@@ -27,9 +27,9 @@ export default function IntegrationDashboard() {
         // Pass the signal to the fetch call
         // await createSyncWorkflow({
         //   name: "FX Sync",
-        //   slug: "fx_sync",
+        //   slug: "frankfurter_api",
         //   description: "Synchronizes exchange rates from Frankfurter API",
-        //   external_connection_name: "fx_sync",
+        //   external_connection_name: "frankfurter_api",
         //   command_template: "sync_currency_rates",
         //   parameters: {
         //     debug: "boolean",

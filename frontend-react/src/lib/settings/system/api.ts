@@ -121,9 +121,9 @@ const mockSystemIntegrationData: SystemIntegrationData = {
       {
         id: 4,
         name: "FX Sync",
-        slug: "fx_sync",
+        slug: "frankfurter_api",
         description: "Synchronizes currency exchange rates from the Frankfurter API.",
-        external_connection_name: "currency_api",
+        external_connection_name: "frankfurter_api",
         command_template: "sync_currency_rates",
         parameters: { debug: "boolean", force_update: "boolean" },
         environment_variables: {

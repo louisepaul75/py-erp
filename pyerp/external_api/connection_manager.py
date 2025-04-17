@@ -29,11 +29,10 @@ logger.debug(f"CONNECTIONS_FILE: {CONNECTIONS_FILE}")
 DEFAULT_CONNECTIONS = {
     "legacy_erp": False,
     "images_cms": False,
-    "fx_sync": True,
+    "frankfurter_api": True,
     "buchhaltungs_buttler": False,
     "zebra_day": False,
     "kibana_elastic": False,
-    "frankfurter_api": False,
 }
 
 
