@@ -23,7 +23,9 @@ class SalesModel(models.Model):
     )
     is_synchronized = models.BooleanField(
         default=False,
-        help_text=_("Whether this record is synchronized with the legacy system"),
+        help_text=_(
+            "Whether this record is synchronized with the legacy system"
+        ),
     )
 
     class Meta:
@@ -209,7 +211,9 @@ class Address(SalesModel):
     formal_salutation = models.CharField(
         max_length=200,
         blank=True,
-        help_text=_("Formal salutation (maps to Briefanrede in legacy system)"),
+        help_text=_(
+            "Formal salutation (maps to Briefanrede in legacy system)"
+        ),
     )
 
     class Meta:
@@ -239,8 +243,9 @@ class Address(SalesModel):
 
 def get_sales_status():
     """
-    A safe helper function that can be imported to check if the sales module is working.
-    This will be used by other modules that might attempt to import from sales.
+    A safe helper function that can be imported to check if the sales module
+    is working. This will be used by other modules that might attempt to
+    import from sales.
     """
     try:
         from django.db import connection
@@ -260,7 +265,9 @@ class PaymentTerms(SalesModel):
     name = models.CharField(max_length=50)
     days_due = models.IntegerField()
     discount_days = models.IntegerField(default=0)
-    discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    discount_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0
+    )
     active = models.BooleanField(default=True)
 
     class Meta:
@@ -271,7 +278,10 @@ class PaymentTerms(SalesModel):
 
     def __str__(self):
         if self.discount_percent > 0:
-            return f"{self.discount_percent}% discount if paid within {self.discount_days} days, net {self.days_due} days"
+            return (
+                f"{self.discount_percent}% discount if paid within "
+                f"{self.discount_days} days, net {self.days_due} days"
+            )
         return f"Net {self.days_due} days"
 
 
@@ -300,7 +310,9 @@ class ShippingMethod(SalesModel):
     name = models.CharField(max_length=50)
     code = models.CharField(max_length=20)
     description = models.TextField(blank=True, null=True)
-    default_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    default_cost = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0
+    )
     active = models.BooleanField(default=True)
 
     class Meta:
@@ -334,6 +346,14 @@ class SalesRecord(SalesModel):
         ("CANCELLED", _("Cancelled")),
     ]
 
+    # Define choices for delivery status
+    DELIVERY_STATUS_CHOICES = [
+        ("PENDING", _("Pending Delivery")),
+        ("PARTIALLY_DELIVERED", _("Partially Delivered")),
+        ("FULLY_DELIVERED", _("Fully Delivered")),
+        ("CANCELLED", _("Cancelled")),
+    ]
+
     record_number = models.CharField(
         max_length=50,
         help_text=_("Document number (maps to PapierNr in legacy system)"),
@@ -359,7 +379,9 @@ class SalesRecord(SalesModel):
         max_digits=12,
         decimal_places=2,
         default=0,
-        help_text=_("Subtotal amount before tax (maps to Netto in legacy system)"),
+        help_text=_(
+            "Subtotal amount before tax (maps to Netto in legacy system)"
+        ),
     )
     tax_amount = models.DecimalField(
         max_digits=12,
@@ -383,7 +405,9 @@ class SalesRecord(SalesModel):
         max_digits=12,
         decimal_places=2,
         default=0,
-        help_text=_("Total amount including tax (maps to Endbetrag in legacy system)"),
+        help_text=_(
+            "Total amount including tax (maps to Endbetrag in legacy system)"
+        ),
     )
     payment_status = models.CharField(
         max_length=20,
@@ -395,6 +419,16 @@ class SalesRecord(SalesModel):
         null=True,
         blank=True,
         help_text=_("Date of payment (maps to ZahlungsDat in legacy system)"),
+    )
+    amount_paid_external = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        default=None, # Explicitly allow NULL
+        help_text=_(
+            "Amount reported as paid by the external system (e.g., BuchhaltungsButler)"
+        ),
     )
     currency = models.CharField(
         max_length=3,
@@ -450,6 +484,13 @@ class SalesRecord(SalesModel):
         blank=True,
         help_text=_("Billing address (maps to Rech_Adr in legacy system)"),
     )
+    delivery_status = models.CharField(
+        max_length=25,
+        choices=DELIVERY_STATUS_CHOICES,
+        default="PENDING",
+        help_text=_("Overall delivery status based on line items"),
+        db_index=True,  # Index for potentially filtering by status
+    )
 
     class Meta:
         verbose_name = _("Sales Record")
@@ -465,7 +506,10 @@ class SalesRecord(SalesModel):
         unique_together = [("record_number", "record_type")]
 
     def __str__(self):
-        return f"{self.get_record_type_display()} {self.record_number} ({self.record_date})"
+        return (
+            f"{self.get_record_type_display()} {self.record_number} "
+            f"({self.record_date})"
+        )
 
 
 class SalesRecordItem(SalesModel):
@@ -497,7 +541,9 @@ class SalesRecordItem(SalesModel):
         help_text=_("Sales record this item belongs to"),
     )
     position = models.IntegerField(
-        help_text=_("Position in the sales record (maps to PosNr in legacy system)"),
+        help_text=_(
+            "Position in the sales record (maps to PosNr in legacy system)"
+        ),
     )
     legacy_sku = models.CharField(
         max_length=50,
@@ -535,7 +581,9 @@ class SalesRecordItem(SalesModel):
         max_digits=10,
         decimal_places=2,
         default=0,
-        help_text=_("Tax amount for this item"),
+        help_text=_(
+            "Tax amount for this item"
+        ),
     )
     line_subtotal = models.DecimalField(
         max_digits=12,
@@ -547,7 +595,9 @@ class SalesRecordItem(SalesModel):
         max_digits=12,
         decimal_places=2,
         default=0,
-        help_text=_("Line total including tax (maps to Pos_Betrag in legacy system)"),
+        help_text=_(
+            "Line total including tax (maps to Pos_Betrag in legacy system)"
+        ),
     )
     item_type = models.CharField(
         max_length=20,
@@ -563,7 +613,9 @@ class SalesRecordItem(SalesModel):
         max_length=20,
         choices=FULFILLMENT_STATUS_CHOICES,
         default="PENDING",
-        help_text=_("Fulfillment status (derived from Picking_ok in legacy system)"),
+        help_text=_(
+            "Fulfillment status (derived from Picking_ok in legacy system)"
+        ),
     )
     fulfilled_quantity = models.DecimalField(
         max_digits=10,
@@ -593,4 +645,67 @@ class SalesRecordItem(SalesModel):
         ordering = ["sales_record", "position"]
 
     def __str__(self):
-        return f"{self.sales_record} - Line {self.position}: {self.description} ({self.quantity} x {self.unit_price})"
+        return (
+            f"{self.sales_record} - Line {self.position}: "
+            f"{self.description} ({self.quantity} x {self.unit_price})"
+        )
+
+
+# New model for Many-to-Many relationships between Sales Records
+class SalesRecordRelationship(SalesModel):
+    """
+    Represents a relationship between two SalesRecord documents.
+    e.g., An invoice related to a delivery note, a credit note related
+    to an invoice.
+    """
+
+    RELATIONSHIP_TYPE_CHOICES = [
+        ("RELATES_TO", _("Relates To")),
+        ("SPLIT_FROM", _("Split From")),
+        ("RETURN_OF", _("Return Of")),
+        ("CREDITS", _("Credits")),
+        ("REFERENCES", _("References")),
+        # Add more types as needed
+    ]
+
+    from_record = models.ForeignKey(
+        SalesRecord,
+        on_delete=models.CASCADE,
+        related_name="outgoing_relationships",
+        help_text=_("The source record in the relationship."),
+    )
+    to_record = models.ForeignKey(
+        SalesRecord,
+        on_delete=models.CASCADE,
+        related_name="incoming_relationships",
+        help_text=_("The target record in the relationship."),
+    )
+    relationship_type = models.CharField(
+        max_length=20,
+        choices=RELATIONSHIP_TYPE_CHOICES,
+        default="RELATES_TO",
+        help_text=_("The type of relationship between the records."),
+        db_index=True,
+    )
+    notes = models.TextField(
+        blank=True,
+        help_text=_("Optional notes about the relationship."),
+    )
+
+    class Meta:
+        verbose_name = _("Sales Record Relationship")
+        verbose_name_plural = _("Sales Record Relationships")
+        app_label = "sales"
+        indexes = [
+            models.Index(fields=["from_record"]),
+            models.Index(fields=["to_record"]),
+            models.Index(fields=["relationship_type"]),
+        ]
+        unique_together = [("from_record", "to_record", "relationship_type")]
+        ordering = ["from_record", "created_at"]
+
+    def __str__(self):
+        return (
+            f"{self.from_record} -> "
+            f"{self.get_relationship_type_display()} -> {self.to_record}"
+        )

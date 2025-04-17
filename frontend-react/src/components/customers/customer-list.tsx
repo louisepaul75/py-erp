@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import * as React from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation"; // Added for navigation
 import Link from "next/link"; // Added for links
 import { Customer } from "@/types/sales-types"; // Assume this type will be updated
@@ -24,7 +25,7 @@ import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 // Updated icons: removed Eye, kept PlusCircle, Edit, Filter
 // Add ArrowUpDown for sorting
-import { PlusCircle, Edit, Search, Filter, ArrowUpDown, X } from "lucide-react";
+import { PlusCircle, Edit, Search, Filter, ArrowUpDown, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 // Assume formatDate exists or create a basic one if needed
@@ -32,6 +33,8 @@ import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils"; // Added for class names
 // Import the hook
 import { useDataTable } from "@/hooks/useDataTable";
+// Import the filter dialog
+import CustomerFilterDialog, { CustomerFilters } from "./customer-filter-dialog";
 
 // Basic currency formatter (similar to draft)
 const formatCurrency = (value: number | undefined | null) => {
@@ -48,13 +51,45 @@ interface CustomerListProps {
   selectedCustomerId: string | null;
 }
 
+// Filter function for customers
+const customerFilterFunction = (customer: Customer, filters: CustomerFilters): boolean => {
+  // Filter by customer type
+  if (filters.customerType !== "all") {
+    const isCompany = customer.isCompany;
+    if (filters.customerType === "company" && !isCompany) return false;
+    if (filters.customerType === "individual" && isCompany) return false;
+  }
+
+  // Filter by customer group
+  if (filters.customerGroup !== "all" && customer.customer_group !== filters.customerGroup) {
+    return false;
+  }
+
+  // Filter by order status
+  if (filters.hasOrders && (!customer.orderCount || customer.orderCount <= 0)) {
+    return false;
+  }
+
+  return true;
+};
+
 export default function CustomerList({ onSelectCustomer, selectedCustomerId }: CustomerListProps) {
   const router = useRouter(); // Added router hook
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // Add state for other filters if implemented, e.g.:
-  // const [filterHasOrders, setFilterHasOrders] = useState(false);
+  // Add state for pagination
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  // Add state for filter dialog
+  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
+  
+  // Initial filters
+  const initialFilters: CustomerFilters = {
+    hasOrders: false,
+    customerType: "all",
+    customerGroup: "all",
+  };
 
   useEffect(() => {
     const fetchCustomers = async () => {
@@ -123,14 +158,16 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
     fetchCustomers();
   }, []);
 
-  // Use the data table hook
+  // Use the data table hook with filter support
   const { 
     processedData: customerList, // Renamed for clarity
     sortConfig,
     requestSort,
     searchTerm,
-    setSearchTerm 
-  } = useDataTable<Customer>({
+    setSearchTerm,
+    filters,
+    setFilters
+  } = useDataTable<Customer, CustomerFilters>({
     initialData: customers, // Use the fetched customers
     initialSortKey: 'name', // Default sort by name
     searchableFields: [ // Define fields for the hook to search
@@ -142,8 +179,45 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
       'emailMain',
       'phoneMain',
       'vat_id'
-    ]
+    ],
+    initialFilters: initialFilters,
+    filterFunction: customerFilterFunction
   });
+
+  // Handle filter changes
+  const handleApplyFilters = useCallback((newFilters: CustomerFilters) => {
+    setFilters(newFilters);
+    setCurrentPage(0); // Reset to first page when filters change
+  }, [setFilters]);
+
+  // Pagination logic
+  const totalItems = customerList.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  
+  const goToPage = (page: number) => {
+    if (page >= 0 && page < totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages - 1) {
+      setCurrentPage(prev => prev + 1);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(prev => prev - 1);
+    }
+  };
+
+  // Get paginated customers
+  const paginatedCustomers = React.useMemo(() => {
+    const start = currentPage * pageSize;
+    const end = start + pageSize;
+    return customerList.slice(start, end);
+  }, [customerList, currentPage, pageSize]);
 
   // Updated action handlers
   const handleEditCustomer = (id: number | string) => {
@@ -151,11 +225,17 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
       router.push(`/sales/customers/${id}/edit`); // Navigate to edit page
   };
 
-   const handleCreateCustomer = () => {
+  const handleCreateCustomer = () => {
       console.log("Create new customer");
-       router.push('/sales/customers/new'); // Navigate to create page
-   };
+      router.push('/sales/customers/new'); // Navigate to create page
+  };
 
+  // Determine if any filters are active
+  const hasActiveFilters = filters && (
+    filters.hasOrders || 
+    filters.customerType !== "all" || 
+    filters.customerGroup !== "all"
+  );
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -187,18 +267,19 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
              )}
           </div>
           <Button
-            variant="outline"
+            variant={hasActiveFilters ? "default" : "outline"}
             size="icon"
             aria-label="Filter Customers"
-            onClick={() => alert('Filter button clicked - Implement filter logic')}
+            onClick={() => setIsFilterDialogOpen(true)}
             disabled={isLoading}
+            title={hasActiveFilters ? "Filters active" : "Filter customers"}
           >
             <Filter className="h-4 w-4" />
           </Button>
         </div>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col overflow-hidden min-h-0">
-        <div className="flex-1 overflow-y-auto h-full">
+        <div className="flex-1 overflow-y-auto h-full scrollbar-thin max-md:scrollbar md:scrollbar-none">
           {error && (
             <Alert variant="destructive" className="my-4">
               <AlertTitle>Error</AlertTitle>
@@ -211,7 +292,7 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
                <Skeleton className="h-10 w-full" />
                <Skeleton className="h-10 w-full" />
             </div>
-          ) : customerList.length > 0 ? (
+          ) : paginatedCustomers.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -271,7 +352,7 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {customerList.map((customer) => {
+                {paginatedCustomers.map((customer) => {
                     const customerName = customer.isCompany
                         ? customer.companyName
                         : `${customer.firstName || ''} ${customer.lastName || ''}`;
@@ -324,12 +405,46 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
            )}
         </div>
       </CardContent>
+      {/* Add pagination controls */}
+      {!isLoading && totalItems > 0 && (
+        <div className="p-4 border-t flex justify-between items-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goToPreviousPage}
+            disabled={currentPage === 0 || isLoading}
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {currentPage + 1} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goToNextPage}
+            disabled={currentPage >= totalPages - 1 || isLoading}
+          >
+            Next
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        </div>
+      )}
       <div className="p-4 border-t flex-shrink-0">
         <Button className="w-full" onClick={handleCreateCustomer}>
           <PlusCircle className="mr-2 h-4 w-4" />
           New Customer
         </Button>
       </div>
+
+      {/* Filter Dialog */}
+      <CustomerFilterDialog
+        isOpen={isFilterDialogOpen}
+        onClose={() => setIsFilterDialogOpen(false)}
+        onApplyFilters={handleApplyFilters}
+        initialFilters={filters || initialFilters}
+      />
     </div>
   );
-} 
+}

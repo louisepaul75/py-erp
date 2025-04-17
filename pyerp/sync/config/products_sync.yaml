@@ -104,7 +104,6 @@ variants:
       custom_transformers:
         - transform_dimensions
         - transform_boolean_flags
-        - transform_parent_relationship
         - transform_prices
       validation_rules:
         - field: sku
@@ -153,4 +152,4 @@ product_images:
     enabled: true
     # timestamp_logic: based_on_last_sync_log # Placeholder
   dependencies:
-    - "variants" # Ensures variants are synced first 
+    - "variants" # Ensures variants are synced first

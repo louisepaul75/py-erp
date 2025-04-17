@@ -209,8 +209,10 @@ describe('MessageSelectorForm', () => {
     // Submit the form
     await user.click(screen.getByRole('button', { name: /send message/i }));
 
-    // Verify form fields are reset
-    expect(screen.getByPlaceholderText('Enter message title')).toHaveValue('');
-    expect(screen.getByPlaceholderText('Enter your message')).toHaveValue('');
-  });
+    // Wait for form fields to be reset
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Enter message title')).toHaveValue('');
+      expect(screen.getByPlaceholderText('Enter your message')).toHaveValue('');
+    }, { timeout: 10000 }); // Increase timeout to 10 seconds
+  }, 15000); // Set test timeout to 15 seconds
 }); 

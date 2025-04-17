@@ -7,6 +7,18 @@ export interface Currency {
   lastUpdated: string
 }
 
+type ExchangeRate = {
+  target_currency: string;
+  rate: string;
+  date: string;
+};
+
+export interface CurrencyList {
+  code: string
+  name: string
+  exchange_rates: ExchangeRate[];
+}
+
 export interface CurrencyInput {
   code: string
   name: string
@@ -16,5 +28,9 @@ export interface CurrencyInput {
 
 export interface CurrencyUpdateInput extends CurrencyInput {
   id: string
+  code: string
+  name: string
+  realTimeRate: number
+  calculationRate: number
 }
 

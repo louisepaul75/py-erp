@@ -85,6 +85,7 @@ COPY admin_tools/ /app/admin_tools/
 COPY sync_manager/ /app/sync_manager/
 COPY manage.py /app/
 COPY docker/ /app/docker/
+COPY scripts/ /app/scripts/
 
 # Create directories and setup static files
 RUN mkdir -p /app/staticfiles /app/pyerp/static /app/media /app/logs /app/data \

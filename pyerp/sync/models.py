@@ -15,7 +15,7 @@ class SyncSource(models.Model):
     def __str__(self):
         return self.name
 
-
+ 
 class SyncTarget(models.Model):
     """Represents a data target for synchronization."""
 

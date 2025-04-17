@@ -10,8 +10,20 @@ from django.db.models import Model
 
 from .base import BaseLoader, LoadResult
 
+# Configure logger for this module
+logger = logging.getLogger("pyerp.sync.loaders.django_model")
+logger.setLevel(logging.DEBUG)  # Ensure DEBUG level is set
 
-logger = logging.getLogger(__name__)
+# Add console handler if not already present (to ensure output)
+if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter("%(name)s - %(levelname)s - %(message)s")
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+    logger.propagate = False  # Prevent duplicate messages from root logger
+
+# logger = logging.getLogger(__name__)
 
 
 class DjangoModelLoader(BaseLoader):
@@ -34,7 +46,9 @@ class DjangoModelLoader(BaseLoader):
             module = __import__(module_path, fromlist=[class_name])
             return getattr(module, class_name)
         except (ImportError, AttributeError, ValueError) as e:
-            raise ImportError(f"Could not import class '{class_path}': {e}") from e
+            raise ImportError(
+                f"Could not import class '{class_path}': {e}"
+            ) from e
 
     def get_required_config_fields(self) -> List[str]:
         """Get required configuration fields.
@@ -61,24 +75,43 @@ class DjangoModelLoader(BaseLoader):
         model_name = self.config.get('model_name')
 
         if model_path:
-            logger.info(f"Attempting to load model directly from path: {model_path}")
+            logger.info(
+                f"Attempting to load model directly from path: {model_path}"
+            )
             try:
                 model_class = self._import_class(model_path)
-                logger.info(f"Successfully loaded model {model_class.__name__} from path.")
+                logger.info(
+                    f"Successfully loaded model {model_class.__name__} "
+                    f"from path."
+                )
                 return model_class
             except ImportError as e:
-                logger.warning(f"Failed to load model from path '{model_path}': {e}. Falling back to app/model name.")
+                logger.warning(
+                    f"Failed to load model from path '{model_path}': {e}. "
+                    f"Falling back to app/model name."
+                )
         
         if app_name and model_name:
-            logger.info(f"Attempting to load model using app_name='{app_name}' and model_name='{model_name}'")
+            logger.info(
+                f"Attempting to load model using app_name='{app_name}' "
+                f"and model_name='{model_name}'"
+            )
             try:
                 model_class = apps.get_model(app_name, model_name)
-                logger.info(f"Successfully loaded model {model_class.__name__} using app/model name.")
+                logger.info(
+                    f"Successfully loaded model {model_class.__name__} "
+                    f"using app/model name."
+                )
                 return model_class
             except LookupError as e:
-                 raise ValueError(f"Failed to get model {app_name}.{model_name}: {e}") from e
+                raise ValueError(
+                    f"Failed to get model {app_name}.{model_name}: {e}"
+                ) from e
 
-        raise ValueError("Loader configuration must provide either 'model' path or 'app_name' and 'model_name'")
+        raise ValueError(
+            "Loader configuration must provide either 'model' path "
+            "or 'app_name' and 'model_name'"
+        )
 
     def _get_model_class(self) -> Type[Model]:
         """Return the cached model class."""
@@ -111,26 +144,56 @@ class DjangoModelLoader(BaseLoader):
         lookup_criteria = {unique_field: record[unique_field]}
 
         # Prepare record data
-        prepared_record = record.copy()
+        final_prepared_record = {}  # New dictionary to build
 
-        # Remove any fields that don't exist on the model or are auto-managed
+        # Filter record to include only valid model fields
         model_class = self._get_model_class()
         model_fields = {f.name: f for f in model_class._meta.get_fields()}
+        logger.debug(
+            f"[prepare_record] Model fields for {model_class.__name__}: "
+            f"{list(model_fields.keys())}"
+        )
 
-        for field in list(prepared_record.keys()):
-            # Skip if field doesn't exist or is auto-managed
+        popped_fields = []
+        kept_fields = []
+
+        # Iterate over fields from the original record passed from transformer
+        for field, value in record.items():
+            # Check if field exists on the model
             if field not in model_fields:
-                prepared_record.pop(field)
+                popped_fields.append(f"{field} (Not in model)")
                 continue
 
             field_obj = model_fields[field]
-            is_pk = getattr(field_obj, "primary_key", False)  # Primary key
-            is_auto = getattr(field_obj, "auto_created", False)  # Auto-created
+            is_pk = getattr(field_obj, "primary_key", False)
+            is_auto = getattr(field_obj, "auto_created", False)
 
-            if is_pk or is_auto:
-                prepared_record.pop(field)
+            # Keep the field if it exists and is not PK or auto-managed
+            if not (is_pk or is_auto):
+                # Add to the new dictionary
+                final_prepared_record[field] = value
+                kept_fields.append(field)
+            else:
+                popped_fields.append(f"{field} (PK or Auto)")
 
-        return lookup_criteria, prepared_record
+        # Log popped and kept fields
+        if popped_fields:
+            logger.debug(
+                f"[prepare_record] Popped fields for {lookup_criteria}: "
+                f"{popped_fields}"
+            )
+        if kept_fields:
+            logger.debug(
+                f"[prepare_record] Kept fields for {lookup_criteria}: "
+                f"{kept_fields}"
+            )
+        else:
+            logger.warning(
+                f"[prepare_record] No fields kept for {lookup_criteria}"
+            )
+
+        # Return the newly constructed dictionary
+        return lookup_criteria, final_prepared_record
 
     def load_record(
         self,
@@ -138,6 +201,7 @@ class DjangoModelLoader(BaseLoader):
         record: Dict[str, Any],
         update_existing: bool = True,
         create_new: bool = True,
+        instance: Optional[Model] = None,
     ) -> Optional[Model]:
         """Load a single record into Django model.
 
@@ -146,6 +210,7 @@ class DjangoModelLoader(BaseLoader):
             record: Record data to load
             update_existing: Whether to update existing records
             create_new: Whether to create new records
+            instance: Pre-fetched model instance if exists, otherwise None.
 
         Returns:
             Created or updated model instance, or None if skipped
@@ -155,25 +220,82 @@ class DjangoModelLoader(BaseLoader):
             ValidationError: If model validation fails
         """
         model_class = self._get_model_class()
+        # Initialize update_fields_list to ensure it's defined for all paths
+        update_fields_list = []
 
         try:
             with transaction.atomic():
-                # Check for existing record
-                instance = model_class.objects.filter(**lookup_criteria).first()
-
                 if instance:
                     if not update_existing:
                         return None
 
                     # Update existing instance
+                    logger.debug(
+                        f"Updating existing {model_class.__name__} "
+                        f"instance for {lookup_criteria}..."
+                    )
+                    # Log keys received by load_record
+                    logger.debug(
+                        f" -> Received record keys for update: "
+                        f"{list(record.keys())}"
+                    )
+                    # Reset update_fields_list for updating existing instances
+                    update_fields_list = []  # Track fields being updated
                     for field, value in record.items():
-                        setattr(instance, field, value)
+                        # Log setting price fields specifically
+                        if field in [
+                            'retail_price',
+                            'wholesale_price',
+                            'retail_unit',
+                            'wholesale_unit'
+                        ]:
+                            logger.debug(
+                                f" -> Attempting to set {field} = {value} "
+                                f"(type: {type(value).__name__})"
+                            )
+                        
+                        current_value = getattr(instance, field, None)
+                        if current_value != value:
+                            setattr(instance, field, value)
+                            update_fields_list.append(field)
+                        
+                    # Log fields intended for update
+                    if update_fields_list:
+                        logger.debug(
+                            f" -> Fields marked for update: "
+                            f"{update_fields_list}"
+                        )
+                    else:
+                        logger.debug(" -> No fields marked for update.")
+
                 else:
                     if not create_new:
                         return None
 
+                    # --- Start: Check for existing records based on unique_together constraints --- 
+                    has_constraint_conflict = False
+                    for constraint_fields in model_class._meta.unique_together:
+                        # Check if all fields for this constraint are in the record
+                        if all(f in record for f in constraint_fields):
+                            constraint_lookup = {f: record[f] for f in constraint_fields}
+                            # Check if a record exists with these constraint values
+                            if model_class.objects.filter(**constraint_lookup).exists():
+                                logger.warning(
+                                    f"Skipping creation for lookup {lookup_criteria}: "
+                                    f"A record already exists with conflicting unique constraint fields "
+                                    f"{constraint_fields} = {tuple(record[f] for f in constraint_fields)}."
+                                )
+                                has_constraint_conflict = True
+                                break # Found a conflict, no need to check other constraints
+                    
+                    if has_constraint_conflict:
+                        return None # Skip this record due to conflict
+                    # --- End: Check for existing records based on unique_together constraints ---
+
                     # Create new instance - exclude auto-managed fields
-                    model_fields = {f.name: f for f in model_class._meta.get_fields()}
+                    model_fields = {
+                        f.name: f for f in model_class._meta.get_fields()
+                    }
                     filtered_record = {}
                     for field, value in record.items():
                         # Explicitly exclude 'id' field
@@ -198,13 +320,58 @@ class DjangoModelLoader(BaseLoader):
 
                     instance = model_class(**filtered_record)
 
+                # *** Add full_clean() call here before saving ***
+                instance.full_clean() 
+
                 # Validate and save
                 try:
-                    instance.full_clean()
+                    # Pass update_fields to save() if we were tracking changes
+                    if instance and not instance._state.adding: # Existing instance
+                        # Save with specific fields if they changed, otherwise save all
+                        # fields to trigger auto_now updates.
+                        if update_fields_list:
+                            instance.save(update_fields=update_fields_list)
+                            logger.debug(
+                                f" -> Saved instance with update_fields: "
+                                f"{update_fields_list}"
+                            )
+                        else:
+                             instance.save()
+                             logger.debug(
+                                f" -> No specific fields changed, saving instance "
+                                f"to update auto_now fields."
+                            )
+                    elif instance and instance._state.adding:  # This is a new instance
+                        instance.save()
+                        logger.debug(" -> Saved new instance.")
+                    elif instance:  # Existing instance but no fields changed
+                        logger.debug(
+                            " -> No fields changed in this update, "
+                            "skipping save."
+                        )
+                    else:  # This should not normally be reached
+                        logger.error(" -> No instance to save. This is unexpected.")
+                    
                 except DjangoValidationError as e:
-                    raise ValueError(f"Validation failed: {e}") from e
+                    # Log validation errors more explicitly
+                    logger.error(
+                        f"Validation failed for {model_class.__name__} with "
+                        f"criteria {lookup_criteria}: {e.message_dict}",
+                        exc_info=True
+                    )
+                    raise ValueError(
+                        f"Validation failed: {e.message_dict}"
+                    ) from e
+                except Exception as save_e:
+                    logger.error(
+                        f"Error saving {model_class.__name__} with "
+                        f"criteria {lookup_criteria}: {save_e}",
+                        exc_info=True
+                    )
+                    raise ValueError(
+                        f"Failed to save record: {save_e}"
+                    ) from save_e
 
-                instance.save()
                 return instance
 
         except Exception as e:
@@ -229,7 +396,9 @@ class DjangoModelLoader(BaseLoader):
             LoadResult containing operation statistics
         """
         # Check update_strategy from config
-        update_strategy = self.config.get("update_strategy", "update_or_create")
+        update_strategy = self.config.get(
+            "update_strategy", "update_or_create"
+        )
         if update_strategy == "update":
             # Only update existing records, don't create new ones
             update_existing = True
@@ -267,7 +436,10 @@ class DjangoModelLoader(BaseLoader):
                 result.add_error(
                     record=record, error=e, context={"stage": "preparation"}
                 )
-                logger.error(f"Error preparing record: {e}", extra={"record": record})
+                logger.error(
+                    f"Error preparing record: {e}",
+                    extra={"record": record}
+                )
 
         if not prepared_records:
             return result
@@ -286,17 +458,22 @@ class DjangoModelLoader(BaseLoader):
         # Step 3: Process each record individually
         for unique_value, prepared_record in prepared_records:
             try:
+                # Get the pre-fetched instance from the dictionary
+                existing_instance = existing_records.get(unique_value)
                 lookup_dict = {unique_field: unique_value}
-                instance = self.load_record(
+
+                # Pass the existing_instance (or None) to load_record
+                processed_instance = self.load_record(
                     lookup_dict,
                     prepared_record,
                     update_existing=update_existing,
                     create_new=create_new,
+                    instance=existing_instance,
                 )
 
-                if instance is None:
+                if processed_instance is None:
                     result.skipped += 1
-                elif instance._state.adding:
+                elif processed_instance._state.adding:
                     result.created += 1
                 else:
                     result.updated += 1
@@ -306,7 +483,8 @@ class DjangoModelLoader(BaseLoader):
                     record=original_record, error=e, context={"stage": "load"}
                 )
                 logger.error(
-                    f"Error loading record: {e}", extra={"record": prepared_record}
+                    f"Error loading record: {e}",
+                    extra={"record": prepared_record}
                 )
 
         return result
@@ -331,7 +509,10 @@ class DjangoModelLoader(BaseLoader):
         if strategy == "newest_wins":
             return new_data
         elif strategy == "keep_existing":
-            return {field: getattr(existing_record, field) for field in new_data.keys()}
+            return {
+                field: getattr(existing_record, field)
+                for field in new_data.keys()
+            }
         else:
             raise ValueError(f"Unknown conflict strategy: {strategy}")
 
@@ -355,7 +536,8 @@ class DjangoModelLoader(BaseLoader):
                 if isinstance(field, models.IntegerField):
                     if not isinstance(value, (int, type(None))):
                         raise ValueError(
-                            f"Field {field_name} expects int, " f"got {type(value)}"
+                            f"Field {field_name} expects int, "
+                            f"got {type(value)}"
                         )
                 elif isinstance(field, models.FloatField):
                     if not isinstance(value, (float, int, type(None))):
@@ -366,7 +548,8 @@ class DjangoModelLoader(BaseLoader):
                 elif isinstance(field, models.CharField):
                     if not isinstance(value, (str, type(None))):
                         raise ValueError(
-                            f"Field {field_name} expects string, " f"got {type(value)}"
+                            f"Field {field_name} expects string, "
+                            f"got {type(value)}"
                         )
 
             except models.FieldDoesNotExist:

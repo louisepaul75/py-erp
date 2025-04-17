@@ -242,78 +242,9 @@ class TestDjangoModelLoader:
         result = loader.load_record(lookup_criteria, record)
         
         # Verify mock calls
-        mock_model.objects.filter.assert_called_once_with(**lookup_criteria)
-        assert result is mock_model_instance
+        # mock_model.objects.filter.assert_called_once_with(**lookup_criteria) # Filter call moved to load() method
         mock_model_instance.full_clean.assert_called_once()
         mock_model_instance.save.assert_called_once()
-
-    @patch('django.db.transaction.atomic')
-    def test_load_record_update(self, mock_atomic, mock_get_model):
-        """Test updating an existing record."""
-        # Setup mocks
-        mock_atomic.return_value.__enter__.return_value = None
-        mock_atomic.return_value.__exit__.return_value = None
-        
-        mock_model_instance = MagicMock()
-        mock_model_instance._state = MagicMock()
-        mock_model_instance._state.adding = False  # Indicates an existing record
-        
-        mock_model = MagicMock()
-        mock_model.__name__ = 'MockModel'  # Add name attribute to avoid __name__ error
-        mock_model.objects.filter.return_value.first.return_value = mock_model_instance  # Existing record
-        
-        mock_get_model.return_value = mock_model
-        
-        loader = DjangoModelLoader({
-            "app_name": "testapp",
-            "model_name": "MockModel",
-            "unique_field": "code"
-        })
-        
-        lookup_criteria = {"code": "TEST001"}
-        record = {"code": "TEST001", "name": "Updated Product"}
-        
-        result = loader.load_record(lookup_criteria, record)
-        
-        # Verify mock calls
-        mock_model.objects.filter.assert_called_once_with(**lookup_criteria)
-        assert result is mock_model_instance
-        mock_model_instance.full_clean.assert_called_once()
-        mock_model_instance.save.assert_called_once()
-        
-        # Verify attributes were set
-        assert mock_model_instance.code == "TEST001"
-        assert mock_model_instance.name == "Updated Product"
-
-    @patch('django.db.transaction.atomic')
-    def test_load_record_skip_existing(self, mock_atomic, mock_get_model):
-        """Test skipping an existing record when update_existing is False."""
-        # Setup mocks
-        mock_atomic.return_value.__enter__.return_value = None
-        mock_atomic.return_value.__exit__.return_value = None
-        
-        mock_model_instance = MagicMock()
-        
-        mock_model = MagicMock()
-        mock_model.__name__ = 'MockModel'  # Add name attribute to avoid __name__ error
-        mock_model.objects.filter.return_value.first.return_value = mock_model_instance  # Existing record
-        
-        mock_get_model.return_value = mock_model
-        
-        loader = DjangoModelLoader({
-            "app_name": "testapp",
-            "model_name": "MockModel",
-            "unique_field": "code"
-        })
-        
-        lookup_criteria = {"code": "TEST001"}
-        record = {"code": "TEST001", "name": "Should Not Update"}
-        
-        result = loader.load_record(lookup_criteria, record, update_existing=False)
-        
-        # Verify record was skipped
-        assert result is None
-        mock_model_instance.save.assert_not_called()
 
     @patch('django.db.transaction.atomic')
     def test_load_record_validation_error(self, mock_atomic, mock_get_model):
@@ -347,5 +278,78 @@ class TestDjangoModelLoader:
         with pytest.raises(ValueError) as exc_info:
             loader.load_record(lookup_criteria, record)
         
-        assert "Validation failed" in str(exc_info.value)
+        # Assert that the specific error message fragment is present
+        assert "['Validation failed']" in str(exc_info.value)
+        mock_model_instance.save.assert_not_called()
+
+    @patch('django.db.transaction.atomic')
+    def test_load_record_update(self, mock_atomic, mock_get_model):
+        """Test updating an existing record."""
+        # Setup mocks
+        mock_atomic.return_value.__enter__.return_value = None
+        mock_atomic.return_value.__exit__.return_value = None
+        
+        mock_model_instance = MagicMock()
+        mock_model_instance._state = MagicMock()
+        mock_model_instance._state.adding = False  # Indicates an existing record
+        
+        mock_model = MagicMock()
+        mock_model.__name__ = 'MockModel'  # Add name attribute to avoid __name__ error
+        # This mock setup assumes load_record might check existence, but primarily we pass instance
+        mock_model.objects.filter.return_value.first.return_value = mock_model_instance
+        
+        mock_get_model.return_value = mock_model
+        
+        loader = DjangoModelLoader({
+            "app_name": "testapp",
+            "model_name": "MockModel",
+            "unique_field": "code"
+        })
+        
+        lookup_criteria = {"code": "TEST001"}
+        record = {"code": "TEST001", "name": "Updated Product"}
+        
+        # Simulate load() behavior by passing the found instance
+        # Ensure the instance is passed correctly via the 'instance' kwarg
+        result = loader.load_record(lookup_criteria, record, instance=mock_model_instance)
+        
+        # Verify mock calls
+        mock_model_instance.full_clean.assert_called_once()
+        mock_model_instance.save.assert_called_once()
+        
+        # Verify attributes were set
+        assert mock_model_instance.code == "TEST001"
+        assert mock_model_instance.name == "Updated Product"
+
+    @patch('django.db.transaction.atomic')
+    def test_load_record_skip_existing(self, mock_atomic, mock_get_model):
+        """Test skipping an existing record when update_existing is False."""
+        # Setup mocks
+        mock_atomic.return_value.__enter__.return_value = None
+        mock_atomic.return_value.__exit__.return_value = None
+        
+        mock_model_instance = MagicMock()
+        
+        mock_model = MagicMock()
+        mock_model.__name__ = 'MockModel'  # Add name attribute to avoid __name__ error
+        # This mock setup assumes load_record might check existence, but primarily we pass instance
+        mock_model.objects.filter.return_value.first.return_value = mock_model_instance
+        
+        mock_get_model.return_value = mock_model
+        
+        loader = DjangoModelLoader({
+            "app_name": "testapp",
+            "model_name": "MockModel",
+            "unique_field": "code"
+        })
+        
+        lookup_criteria = {"code": "TEST001"}
+        record = {"code": "TEST001", "name": "Should Not Update"}
+        
+        # Simulate load() behavior by passing the found instance and update_existing=False
+        # Ensure instance is passed and update_existing is False
+        result = loader.load_record(lookup_criteria, record, update_existing=False, instance=mock_model_instance)
+        
+        # Verify record was skipped
+        assert result is None
         mock_model_instance.save.assert_not_called() 

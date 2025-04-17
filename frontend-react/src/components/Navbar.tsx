@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -202,6 +202,12 @@ export function Navbar() {
                       <Link href="/sales/customers" className="flex items-center">
                         <Users className="h-4 w-4 mr-2 text-current" />
                         {t("navigation.customers")}
+                      </Link>
+                    </ShadcnDropdownMenuItem>
+                    <ShadcnDropdownMenuItem asChild>
+                      <Link href="/sales/flow" className="flex items-center">
+                        <FileText className="h-4 w-4 mr-2 text-current" />
+                        Sales Flow
                       </Link>
                     </ShadcnDropdownMenuItem>
                   </DropdownMenuContent>

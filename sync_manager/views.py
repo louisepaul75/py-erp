@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAdminUser
 from pyerp.external_api import connection_manager
+import sys
 
 from .models import SyncWorkflow, SyncJob
 from .serializers import (SyncWorkflowSerializer, SyncJobSerializer, 
@@ -60,15 +61,20 @@ class SyncWorkflowViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=['post'], serializer_class=TriggerSyncJobSerializer)
     def trigger(self, request, slug=None):
+        
         """Triggers a new SyncJob for this workflow."""
         workflow = self.get_object() # Gets workflow based on slug
-        
+        sys.stderr.write(f"Workflow Trigger 1: {request.data}")
         trigger_serializer = TriggerSyncJobSerializer(data=request.data)
+        sys.stderr.write(f"Workflow Trigger 2: {request.data}")
+        
         trigger_serializer.is_valid(raise_exception=True)
+        sys.stderr.write(f"Workflow Trigger 3: {request.data}")
         
         # Combine default parameters with provided ones (provided override defaults)
         job_parameters = workflow.default_parameters.copy()
         job_parameters.update(trigger_serializer.validated_data.get('parameters', {}))
+        sys.stderr.write(f"Workflow Trigger 4: {request.data}")
         
         # Create the SyncJob record
         job = SyncJob.objects.create(

@@ -84,7 +84,7 @@ function HistoryPageContent() {
     }
 
     return (
-      <div className="space-y-3 pb-2">
+      <div className="space-y-3 pb-2 h-full overflow-auto">
         {sortedHistory.map((entry) => (
           <Card key={entry.id} className="overflow-hidden">
             <CardContent className="p-3">

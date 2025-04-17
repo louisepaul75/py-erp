@@ -24,10 +24,10 @@ services:
       - KIBANA_HOST=localhost
       - KIBANA_PORT=5601
     volumes:
-      - pyerp_data:/app
+      # - pyerp_data:/app  # Removed: Code should be in the image, volume hides image contents
       - es_data:/var/lib/elasticsearch
     networks:
-      - default
+      - pyerp-network
     dns_search: .
     healthcheck:
       test: curl --fail http://localhost:8000/admin/ || exit 1
@@ -44,10 +44,28 @@ services:
         /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf
       "
 
+  zebra-day:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.zebra_day
+    container_name: zebra-day-prod
+    restart: always
+    # No ports exposed externally by default in prod, only accessible within the docker network
+    # environment:
+      # Optional: Override startup options if needed
+      # - ZDAY_START_OPTS=""
+    networks:
+      - pyerp-network # Connect to the pyerp network for communication with pyerp
+    volumes:
+      - zebra_day_etc:/usr/local/lib/python3.10/site-packages/zebra_day/etc
+
 volumes:
   pyerp_data:
   es_data:
+  zebra_day_etc: {}
 
 networks:
-  default:
+  pyerp-network:
     driver: bridge
+  # supabase_default:
+  #   external: true

@@ -3,7 +3,8 @@
 # Initialize variables for optional parameters
 RUN_TESTS=""
 USE_CACHE="yes"
-MONITORING_MODE="none"  # Default is basic local logging
+START_MONITORING="no" # Default to not starting monitoring services
+START_ZEBRA="no"      # Default to not starting local zebra-day service
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -20,17 +21,17 @@ while [[ $# -gt 0 ]]; do
             USE_CACHE="no"
             shift
             ;;
-        --monitoring)
-            if [[ "$2" != "none" && "$2" != "remote" ]]; then
-                echo "Error: --monitoring requires one of: none, remote"
-                exit 1
-            fi
-            MONITORING_MODE="$2"
-            shift 2
+        --with-monitoring) # Flag to explicitly start monitoring services
+            START_MONITORING="yes"
+            shift
+            ;;
+        --with-zebra) # Flag to explicitly start local zebra-day service
+            START_ZEBRA="yes"
+            shift
             ;;
         *)
             echo "Unknown parameter: $1"
-            echo "Usage: $0 [--tests ui] [--no-cache] [--monitoring none|remote]"
+            echo "Usage: $0 [--tests ui] [--no-cache] [--with-monitoring] [--with-zebra]"
             exit 1
             ;;
     esac
@@ -39,106 +40,76 @@ done
 # Ensure we're in the project root directory
 cd "$(dirname "$0")"
 
-# Create Docker network if it doesn't exist
-echo "Ensuring Docker network exists..."
-docker network create pyerp-network 2>/dev/null || true
+# Define compose file path
+COMPOSE_FILE="docker/docker-compose.dev.yml"
 
-# Stop the existing container
-echo "Stopping existing pyerp-dev container..."
-docker stop pyerp-dev || true
+# Stop and remove existing containers defined in the compose file
+# This ensures a clean state, stopping all services including monitoring if it was running
+echo "Stopping and removing existing docker-compose services..."
+docker-compose -f "$COMPOSE_FILE" down --remove-orphans || true
 
-# Remove the existing container
-echo "Removing existing pyerp-dev container..."
-docker rm pyerp-dev || true
-
-# Rebuild the Docker image
+# Rebuild Docker images defined in the compose file
 if [ "$USE_CACHE" == "no" ]; then
-    echo "Rebuilding Docker image for development (no cache)..."
-    docker build --no-cache -t pyerp-dev-image -f docker/Dockerfile.dev .
+    echo "Rebuilding Docker images (no cache)..."
+    # We rebuild all services defined in the file, even if not starting monitoring now
+    docker-compose -f "$COMPOSE_FILE" build --no-cache
 else
-    echo "Rebuilding Docker image for development (using cache)..."
-    docker build -t pyerp-dev-image -f docker/Dockerfile.dev .
+    echo "Rebuilding Docker images (using cache)..."
+    docker-compose -f "$COMPOSE_FILE" build
 fi
 
-# Check if .env.dev exists and prepare env_file argument
-ENV_FILE="config/env/.env.dev"
-if [ -f "$ENV_FILE" ]; then
-    echo "Found $ENV_FILE, will use it for environment variables"
-    ENV_ARG="--env-file $ENV_FILE"
-else
-    echo "No $ENV_FILE found, will use development settings with SQLite fallback"
-    ENV_ARG="-e DJANGO_SETTINGS_MODULE=pyerp.config.settings.development -e PYERP_ENV=dev"
+# Check if build was successful
+if [ $? -ne 0 ]; then
+    echo "Error: Docker compose build failed."
+    exit 1
 fi
 
-# Get hostname for developer identification
-HOSTNAME=$(hostname)
-
-# Configure monitoring environment variables based on selected mode
-if [ "$MONITORING_MODE" == "none" ]; then
-    # No monitoring environment variables needed
-    MONITORING_ENV=""
-    MONITORING_SETUP=""
-elif [ "$MONITORING_MODE" == "remote" ]; then
-    # Get remote ELK settings from .env.dev file or use defaults
-    if [ -f "$ENV_FILE" ]; then
-        # Source the .env file to get the ELK settings
-        source "$ENV_FILE"
-        # Set environment variables for remote ELK
-        MONITORING_ENV="-e ELASTICSEARCH_HOST=${ELASTICSEARCH_HOST:-production-elk-server-address} -e ELASTICSEARCH_PORT=${ELASTICSEARCH_PORT:-9200} -e KIBANA_HOST=${KIBANA_HOST:-production-elk-server-address} -e KIBANA_PORT=${KIBANA_PORT:-5601} -e ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME:-} -e ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD:-} -e ELASTICSEARCH_INDEX_PREFIX=pyerp-dev -e PYERP_ENV=dev -e HOSTNAME=$HOSTNAME"
-    else
-        echo "Warning: No $ENV_FILE found, using default remote ELK settings"
-        MONITORING_ENV="-e ELASTICSEARCH_HOST=production-elk-server-address -e ELASTICSEARCH_PORT=9200 -e KIBANA_HOST=production-elk-server-address -e KIBANA_PORT=5601 -e ELASTICSEARCH_INDEX_PREFIX=pyerp-dev -e PYERP_ENV=dev -e HOSTNAME=$HOSTNAME"
-    fi
-    
-    # Create Filebeat supervisor config when monitoring is enabled
-    MONITORING_SETUP="echo '[program:filebeat]
-command=/usr/bin/filebeat -e -c /etc/filebeat/filebeat.yml
-autostart=true
-autorestart=true
-startretries=3
-stderr_logfile=/app/logs/filebeat-err.log
-stdout_logfile=/app/logs/filebeat-out.log
-priority=5
-user=root' >> /etc/supervisor/conf.d/supervisord.conf &&"
-fi
-
-# Create necessary directories if they don't exist
+# Create necessary host directories (compose volumes handle container dirs)
 mkdir -p static media logs data
 
 # Clean the host logs directory before mounting it
 echo "Cleaning host logs directory..."
 rm -rf ./logs/*
 
-# Start the pyERP container with improved mount points
-echo "Starting new pyerp-dev container..."
-docker run -d \
-  --name pyerp-dev \
-  $ENV_ARG \
-  $MONITORING_ENV \
-  -p 8000:8000 \
-  -p 3000:3000 \
-  -p 6379:6379 \
-  -p 80:80 \
-  -v "$(pwd)":/app \
-  -v /app/frontend-react/node_modules \
-  -v "$(pwd)/static":/app/static \
-  -v "$(pwd)/media":/app/media \
-  -v "$(pwd)/logs":/app/logs \
-  -v "$(pwd)/data":/app/data \
-  --network pyerp-network \
-  pyerp-dev-image \
-  bash -c "cd /app && chmod +x /app/docker/ensure_static_dirs.sh && bash /app/docker/ensure_static_dirs.sh && chmod +x /app/docker/ensure_frontend_deps.sh && bash /app/docker/ensure_frontend_deps.sh && $MONITORING_SETUP /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
+# Determine which services to start
+SERVICES_TO_START="pyerp-app" # pyerp-app is always needed
+if [ "$START_MONITORING" == "yes" ]; then
+    echo "Monitoring services will be started (--with-monitoring flag detected)."
+    SERVICES_TO_START="$SERVICES_TO_START pyerp-elastic-kibana"
+else
+    echo "Monitoring services will NOT be started (use --with-monitoring to include them)."
+fi
 
-# Show the last 50 lines of container logs
-echo "Showing last 50 lines of container logs..."
-docker logs --tail 50 pyerp-dev || true
+if [ "$START_ZEBRA" == "yes" ]; then
+    echo "Local Zebra Day service will be started (--with-zebra flag detected)."
+    SERVICES_TO_START="$SERVICES_TO_START zebra-day"
+else
+    echo "Local Zebra Day service will NOT be started. Assuming connection to remote Zebra Day (e.g., 192.168.73.65)."
+    echo "(Use --with-zebra to start the local service)."
+fi
+
+# Start the selected services defined in the compose file in detached mode
+echo "Starting docker-compose services: $SERVICES_TO_START..."
+docker-compose -f "$COMPOSE_FILE" up -d $SERVICES_TO_START
+
+# Check if compose up was successful
+if [ $? -ne 0 ]; then
+    echo "Error: docker-compose up failed."
+    exit 1
+fi
+
+# Show the last 50 lines of container logs for the main app
+echo "Showing last 50 lines of pyerp-app logs..."
+docker-compose -f "$COMPOSE_FILE" logs --tail 50 pyerp-app || true
 
 # Run tests only if the --tests parameter was provided
 if [ -n "$RUN_TESTS" ]; then
+    echo "Waiting a few seconds for services to stabilize before running tests..."
+    sleep 5 # Give services a moment to start
     case "$RUN_TESTS" in
         "ui")
-            echo "Running frontend tests..."
-            docker exec pyerp-dev bash -c "cd /app/frontend-react && npm test -- --silent || echo 'Tests may fail initially, but the setup is complete.'"
+            echo "Running frontend tests in pyerp-app container..."
+            docker-compose -f "$COMPOSE_FILE" exec pyerp-app bash -c "cd /app/frontend-react && npm test -- --silent || echo 'Tests may fail initially, but the setup is complete.'"
             ;;
         *)
             echo "Unknown test type: $RUN_TESTS"
@@ -147,19 +118,18 @@ if [ -n "$RUN_TESTS" ]; then
     esac
 fi
 
-echo -e "\nContainer is running in the background. Use 'docker logs pyerp-dev' to view logs again."
+echo -e "\nServices are running in the background. Use 'docker-compose -f $COMPOSE_FILE logs [SERVICE_NAME]' to view logs."
 
-# Display monitoring information based on the selected mode
-if [ "$MONITORING_MODE" == "none" ]; then
-    echo -e "\nMonitoring: Disabled (using local logging only)"
-elif [ "$MONITORING_MODE" == "remote" ]; then
-    echo -e "\nMonitoring services (remote connection):"
-    echo -e "- Connected to remote Elasticsearch: ${ELASTICSEARCH_HOST:-production-elk-server-address}:${ELASTICSEARCH_PORT:-9200}"
-    echo -e "- Connected to remote Kibana: ${KIBANA_HOST:-production-elk-server-address}:${KIBANA_PORT:-5601}"
-    echo -e "- Using developer ID: $HOSTNAME"
+# Display monitoring information based on whether it was started
+if [ "$START_MONITORING" == "yes" ]; then
+    echo -e "\nMonitoring services (internal ELK stack) were started:"
+    echo -e "- Elasticsearch: http://localhost:9200 (exposed via pyerp-elastic-kibana service)"
+    echo -e "- Kibana: http://localhost:5602 (exposed via pyerp-elastic-kibana service port mapping 5602:5601)"
+else
+    echo -e "\nMonitoring services were NOT started. Use the --with-monitoring flag to include them."
 fi
 
-echo -e "To run frontend tests manually, use: docker exec -it pyerp-dev bash -c 'cd /app/frontend-react && npm test'"
+echo -e "To run frontend tests manually, use: docker-compose -f $COMPOSE_FILE exec pyerp-app bash -c 'cd /app/frontend-react && npm test'"
 
 echo "Waiting 10 seconds before starting health checks..."
 sleep 10
@@ -170,63 +140,113 @@ MAX_RETRIES=24
 RETRY_DELAY=5
 FRONTEND_URL="http://localhost:3000"
 BACKEND_URL="http://localhost:8000"
+ZEBRA_URL="http://localhost:8118" # Health check for zebra_day
 
-# Check Next.js Frontend
-echo "Checking Next.js frontend ($FRONTEND_URL)..."
-FRONTEND_SUCCESS=false
-for i in $(seq 1 $MAX_RETRIES); do
-    if curl -fsS $FRONTEND_URL > /dev/null; then
-        echo "✅ Next.js frontend is responsive."
-        FRONTEND_SUCCESS=true
-        break
+# Function to check if a compose service is running
+check_service_running() {
+    local service_name=$1
+    docker-compose -f "$COMPOSE_FILE" ps -q "$service_name" 2>/dev/null | grep -q . 
+}
+
+# Check Next.js Frontend (pyerp-app)
+if check_service_running pyerp-app; then
+    echo "Checking Next.js frontend ($FRONTEND_URL)..."
+    FRONTEND_SUCCESS=false
+    for i in $(seq 1 $MAX_RETRIES); do
+        if curl -fsS $FRONTEND_URL > /dev/null; then
+            echo "✅ Next.js frontend is responsive."
+            FRONTEND_SUCCESS=true
+            break
+        fi
+        if ! check_service_running pyerp-app; then
+            echo "❌ Error: Service pyerp-app seems to have stopped during check."
+            break
+        fi
+        echo "Attempt $i/$MAX_RETRIES failed. Retrying in $RETRY_DELAY seconds..."
+        sleep $RETRY_DELAY
+    done
+    if [ "$FRONTEND_SUCCESS" = false ] && check_service_running pyerp-app; then
+        echo "❌ Error: Next.js frontend failed to respond after $MAX_RETRIES attempts."
     fi
-    echo "Attempt $i/$MAX_RETRIES failed. Retrying in $RETRY_DELAY seconds..."
-    sleep $RETRY_DELAY
-done
-if [ "$FRONTEND_SUCCESS" = false ]; then
-    echo "❌ Error: Next.js frontend failed to respond after $MAX_RETRIES attempts."
+else
+     echo "Skipping Next.js health check because pyerp-app service is not running."
 fi
 
-# Check Django Backend
-echo "Checking Django backend ($BACKEND_URL)..."
-BACKEND_SUCCESS=false
-for i in $(seq 1 $MAX_RETRIES); do
-    # Using a simple HEAD request which should be faster and sufficient
-    if curl -fsS --head $BACKEND_URL > /dev/null; then
-        echo "✅ Django backend is responsive."
-        BACKEND_SUCCESS=true
-        break
+# Check Django Backend (pyerp-app)
+if check_service_running pyerp-app; then
+    echo "Checking Django backend ($BACKEND_URL)..."
+    BACKEND_SUCCESS=false
+    for i in $(seq 1 $MAX_RETRIES); do
+        if curl -fsS --head $BACKEND_URL/api/health/ > /dev/null; then # Check health endpoint
+            echo "✅ Django backend is responsive."
+            BACKEND_SUCCESS=true
+            break
+        fi
+        if ! check_service_running pyerp-app; then
+            echo "❌ Error: Service pyerp-app seems to have stopped during check."
+            break
+        fi
+        echo "Attempt $i/$MAX_RETRIES failed. Retrying in $RETRY_DELAY seconds..."
+        sleep $RETRY_DELAY
+    done
+    if [ "$BACKEND_SUCCESS" = false ] && check_service_running pyerp-app; then
+        echo "❌ Error: Django backend failed to respond after $MAX_RETRIES attempts."
     fi
-    # Check if container is still running, maybe it crashed
-    if ! docker ps --filter "name=pyerp-dev" --filter "status=running" --format "{{.Names}}" | grep -q pyerp-dev; then
-        echo "❌ Error: Container pyerp-dev seems to have stopped."
-        break # No point retrying if container is down
+else
+     echo "Skipping Django health check because pyerp-app service is not running."
+fi
+
+# Check Zebra Day Service (zebra-day) - Only if local start was requested
+if [ "$START_ZEBRA" == "yes" ]; then
+    if check_service_running zebra-day; then
+        echo "Checking Local Zebra Day service ($ZEBRA_URL)..."
+        ZEBRA_SUCCESS=false
+        for i in $(seq 1 $MAX_RETRIES); do
+            # Zebra day base URL might just return the UI html
+            if curl -fsS $ZEBRA_URL > /dev/null; then 
+                echo "✅ Local Zebra Day service is responsive."
+                ZEBRA_SUCCESS=true
+                break
+            fi
+            if ! check_service_running zebra-day; then
+                echo "❌ Error: Service zebra-day seems to have stopped during check."
+                break
+            fi
+            echo "Attempt $i/$MAX_RETRIES failed. Retrying in $RETRY_DELAY seconds..."
+            sleep $RETRY_DELAY
+        done
+        if [ "$ZEBRA_SUCCESS" = false ] && check_service_running zebra-day; then
+            echo "❌ Error: Local Zebra Day service failed to respond after $MAX_RETRIES attempts."
+        fi
+    else
+        echo "Skipping Local Zebra Day health check because zebra-day service is not running (or failed to start)."
     fi
-    echo "Attempt $i/$MAX_RETRIES failed. Retrying in $RETRY_DELAY seconds..."
-    sleep $RETRY_DELAY
-done
-if [ "$BACKEND_SUCCESS" = false ] && docker ps --filter "name=pyerp-dev" --filter "status=running" --format "{{.Names}}" | grep -q pyerp-dev; then
-    echo "❌ Error: Django backend failed to respond after $MAX_RETRIES attempts."
+else
+    echo "Skipping Local Zebra Day health check because it was not requested to start (--with-zebra not used)."
 fi
 
 echo "--- Health Checks Complete ---"
 
-# --- Check Database Connection Source ---
-echo -e "\n--- Checking Database Connection Source in Logs ---"
-db_source_check_log=$(docker logs pyerp-dev 2>&1 | grep -E 'Database settings source:' | tail -n 1)
+# --- Check Database Connection Source --- (Only if pyerp-app is running)
+if check_service_running pyerp-app; then
+    echo -e "\n--- Checking Database Connection Source in pyerp-app Logs ---"
+    db_source_check_log=$(docker-compose -f "$COMPOSE_FILE" logs pyerp-app 2>&1 | grep -E 'Database settings source:' | tail -n 1)
 
-if [[ -z "$db_source_check_log" ]]; then
-    echo "❌ Database source log line not found."
-    echo "   Attempting to retrieve full logs for inspection..."
-    docker logs pyerp-dev || true
-elif [[ "$db_source_check_log" == *"1Password"* ]]; then
-    echo "✅ Database connected using 1Password credentials."
-    echo "   Log line found: '$db_source_check_log'"
-elif [[ "$db_source_check_log" == *"environment variables"* ]]; then
-    echo "⚠️ Database connected using environment variables (not 1Password)."
-    echo "   Log line found: '$db_source_check_log'"
+    if [[ -z "$db_source_check_log" ]]; then
+        echo "❌ Database source log line not found."
+        echo "   Attempting to retrieve full logs for inspection..."
+        docker-compose -f "$COMPOSE_FILE" logs pyerp-app || true
+    elif [[ "$db_source_check_log" == *"1Password"* ]]; then
+        echo "✅ Database connected using 1Password credentials."
+        echo "   Log line found: '$db_source_check_log'"
+    elif [[ "$db_source_check_log" == *"environment variables"* ]]; then
+        echo "⚠️ Database connected using environment variables (not 1Password)."
+        echo "   Log line found: '$db_source_check_log'"
+    else
+        echo "❓ Unknown database connection source state."
+        echo "   Log line found: '$db_source_check_log'"
+    fi
+    echo "--- Database Check Complete ---"
 else
-    echo "❓ Unknown database connection source state."
-    echo "   Log line found: '$db_source_check_log'"
+    echo -e "\nSkipping Database Connection Source check because pyerp-app service is not running."
 fi
-echo "--- Database Check Complete ---"

@@ -1,0 +1,54 @@
+# pyerp/sync/config/buchhaltungsbutler_creditors.yaml
+# Configuration for syncing BuchhaltungsButler Creditors to pyERP Suppliers
+
+pipeline_name: buchhaltungsbutler_creditors_to_supplier_sync
+
+description: >
+  Extracts creditors from the BuchhaltungsButler API, 
+  transforms them, and loads them into the pyERP Supplier model,
+  mapping postingaccount_number to creditor_id and including address/contact info.
+
+schedule: "@daily" # Example schedule - adjust as needed
+
+extractor:
+  class: pyerp.sync.extractors.buchhaltungsbutler.BuchhaltungsButlerCreditorExtractor
+  config:
+    page_size: 500 # API requests page size
+
+transformer:
+  class: pyerp.sync.transformers.buchhaltungsbutler.BuchhaltungsButlerCreditorTransformer
+  config: {}
+
+loader:
+  class: pyerp.sync.loaders.django_model.DjangoModelLoader
+  config:
+    app_name: "business"             # App label for the Supplier model
+    model_name: "Supplier"            # Model name
+    # Corrected key name from unique_key_field to unique_field
+    unique_field: "creditor_id"     # Field used to identify existing records
+    update_existing: true            # Update existing records if found
+    batch_size: 100                # Number of records to process in each batch
+    fields_to_update:               # Only update these fields if record exists
+      - name
+      - email
+      - contact_person
+      - street
+      - additional_addressline
+      - zip_code
+      - city
+      - country
+      - iban
+      - bic
+      - accounting_id
+      - tax_id
+      # - synced_at # Example: could add synced_at update here
+    
+    # Optional: Define default values for fields not provided by transformer
+    # default_values:
+    #   some_other_field: "Default Value"
+    
+    # Optional: Logging level specific to the loader
+    # log_level: DEBUG
+    
+    # Optional: Error handling configuration
+    # on_error: skip # Options: skip, fail_batch, fail_pipeline 

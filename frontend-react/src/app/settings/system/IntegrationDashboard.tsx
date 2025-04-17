@@ -27,9 +27,9 @@ export default function IntegrationDashboard() {
         // Pass the signal to the fetch call
         // await createSyncWorkflow({
         //   name: "FX Sync",
-        //   slug: "fx_sync",
+        //   slug: "frankfurter_api",
         //   description: "Synchronizes exchange rates from Frankfurter API",
-        //   external_connection_name: "currency_api",
+        //   external_connection_name: "frankfurter_api",
         //   command_template: "sync_currency_rates",
         //   parameters: {
         //     debug: "boolean",
@@ -41,7 +41,6 @@ export default function IntegrationDashboard() {
         // });
         
         const data = await fetchSystemIntegrationData(signal); 
-        console.log("")
         // Check if the request was aborted before setting state
         if (!signal.aborted) {
           setIntegrationData(data);
@@ -68,7 +67,12 @@ export default function IntegrationDashboard() {
   }, []); // Remove 't' from dependency array
 
   const handleStatusChange = (updatedData: SystemIntegrationData) => {
-    setIntegrationData(updatedData);
+    const keys = Object.keys(updatedData)
+    let copy_integration: SystemIntegrationData = {...integrationData}
+    keys.map((key) => (
+      copy_integration[key]["enabled"] = updatedData[key]
+    ))
+    setIntegrationData(copy_integration);
   };
 
   if (isLoading) {

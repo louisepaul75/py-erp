@@ -30,7 +30,7 @@ export default function SuppliersPage() {
   // or rely on layout/middleware configurations.
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 h-full overflow-auto">
       {/* You might want a page header here similar to the draft's PageHeader */}
       {/* <PageHeader title="Business Management" description="Manage suppliers, purchases, and documents" /> */}
       <h1 className="text-2xl font-semibold">Suppliers</h1>

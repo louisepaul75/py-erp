@@ -7,13 +7,14 @@ from .views import (
     AddressViewSet,
     SalesRecordViewSet,
     SalesRecordItemViewSet,
+    sales_flow_view,
 )
 
 app_name = "sales"
 
 # Create a router and register our viewsets with it
 router = DefaultRouter()
-router.register(r"customers", CustomerViewSet)
+router.register(r"customers", CustomerViewSet, basename="customers")
 router.register(r"addresses", AddressViewSet)
 router.register(r"records", SalesRecordViewSet)
 router.register(r"record-items", SalesRecordItemViewSet)
@@ -36,4 +37,5 @@ urlpatterns = [
     path("", include(router.urls)),
     path("status/", placeholder_view, name="status"),
     path("placeholder/", placeholder_view, name="placeholder"),
+    path("flow/", sales_flow_view, name="sales_flow"),
 ]

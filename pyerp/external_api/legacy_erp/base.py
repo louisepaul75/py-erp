@@ -640,7 +640,7 @@ class BaseAPIClient:
 
             all_fetched_records = []
             current_skip = skip
-            page_size = top if top is not None else 100  # Use top as page size or default
+            page_size = top if top is not None else 10000  # Use top as page size or default to 10000
 
             while True:
                 params = {"$skip": current_skip}
@@ -651,7 +651,9 @@ class BaseAPIClient:
                 # --- Filter Query Processing (REVERTED AND FIXED) ---
                 if filter_query:
                     if isinstance(filter_query, list):
-                        filter_parts = []
+                        
+                        # Group filters by field name
+                        grouped_filters = {}
                         for filter_item in filter_query:
                             try:
                                 if len(filter_item) != 3:
@@ -661,51 +663,67 @@ class BaseAPIClient:
                                     )
                                     continue
                                 field, operator, value = filter_item
-                                # Format value appropriately (e.g., quote strings)
+                                
+                                # Format value appropriately
                                 if isinstance(value, str):
-                                    # Escape single quotes within the string value
-                                    safe_value = value  # REMOVED manual escaping
-                                    # Quote the string value using double quotes
-                                    formatted_value = f'"{safe_value}"'
+                                    formatted_value = f'\"{value}\"' # Wrap strings in escaped quotes
                                 elif hasattr(value, "strftime"):
-                                    formatted_value = value.strftime("%Y-%m-%d")
+                                    # Ensure datetime is formatted as YYYY-MM-DD
+                                    formatted_value = f'\"{value.strftime("%Y-%m-%d")}\"' 
                                 else:
-                                    formatted_value = value
+                                    formatted_value = value # Assume numeric or other non-string
 
-                                # Construct the filter part string
-                                # NEW LOGIC: Always wrap the individual condition in single quotes
-                                # to match the format observed to work for OR filters: 'Field op Value' or 'Field op Value'
-                                filter_part_str = f"'{field} {operator} {formatted_value}'"
+                                # Construct the single condition string (without outer quotes yet)
+                                condition_str = f"{field} {operator} {formatted_value}"
 
-                                filter_parts.append(filter_part_str)
+                                if field not in grouped_filters:
+                                    grouped_filters[field] = []
+                                grouped_filters[field].append(condition_str)
+                                
                             except Exception as e:
                                 error_msg = f"Error processing filter item {filter_item}: {str(e)}"
                                 logger.error(error_msg)
                                 if fail_on_filter_error:
                                     raise RuntimeError(error_msg) from e
-                        if filter_parts:
-                            # Check if all filters are for the same field
-                            is_multi_field = False
-                            if len(filter_parts) > 1:
-                                first_field = None
-                                if filter_query and len(filter_query[0]) == 3:
-                                    first_field = filter_query[0][0]
-                                if first_field:
-                                    is_multi_field = any(
-                                        item[0] != first_field for item in filter_query
-                                        if len(item) == 3
-                                    )
 
-                            # Use 'or' if all filters target the same field, 'and' otherwise
-                            # KNOWN ISSUE: Using 'or' here can cause issues with the $top parameter
-                            # The API might return more records than specified by $top.
-                            joiner = " and " if is_multi_field else " or "
-                            params["$filter"] = joiner.join(filter_parts)
+                        # Combine grouped filters
+                        final_filter_parts = []
+                        is_or_group = {}
+                        for field, conditions in grouped_filters.items():
+                            part_id = len(final_filter_parts) # Get index before appending
+                            if len(conditions) > 1:
+                                # Multiple conditions for the same field: join with OR
+                                or_group_content = " or ".join(f"'{c}'" for c in conditions)
+                                final_filter_parts.append(or_group_content)
+                                is_or_group[part_id] = True # Mark this part as an OR group
+                            elif conditions:
+                                # Single condition for a field
+                                final_filter_parts.append(f"'{conditions[0]}'")
+                                is_or_group[part_id] = False # Mark as not an OR group
+                        
+                        if final_filter_parts:
+                            if len(final_filter_parts) > 1:
+                                # Multiple parts/groups: Join with AND. Wrap OR groups in parentheses.
+                                processed_parts = []
+                                for i, part in enumerate(final_filter_parts):
+                                    if is_or_group[i]:
+                                        processed_parts.append(f"({part})") # Add parentheses for OR groups
+                                    else:
+                                        processed_parts.append(part)
+                                params["$filter"] = " and ".join(processed_parts)
+                            else:
+                                # Single part: Use directly (parentheses already omitted)
+                                params["$filter"] = final_filter_parts[0]
+
+                            logger.info(f"Constructed filter string: {params['$filter']}")
                         else:
-                            logger.warning("No valid filter parts found in filter query")
-                    else:
-                        # Assumes filter_query is already a string if not a list
+                            logger.warning("No valid filter parts found after grouping")
+
+                    elif isinstance(filter_query, str):
+                        # Assumes filter_query is already a correctly formatted string
                         params["$filter"] = filter_query
+                    else:
+                         logger.warning(f"Unsupported filter_query type: {type(filter_query)}")
                 # --- End Filter Query Processing ---
 
                 logger.debug(

@@ -6,7 +6,7 @@ import { PasswordPolicyManagement } from "@/components/users/password-policy"
 
 export default function UsersPage() {
   return (
-    <div className="container py-6 md:py-10">
+    <div className="container py-6 md:py-10 h-full overflow-auto">
       <h1 className="text-3xl font-bold mb-6">User Management</h1>
 
       <Tabs defaultValue="users" className="w-full">

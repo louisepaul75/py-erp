@@ -4,8 +4,9 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
+from pyerp.utils.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ValidationError:
@@ -46,6 +47,7 @@ class BaseTransformer(ABC):
         self.custom_transformers = {}
         self.validation_rules = config.get("validation_rules", [])
         self._validate_config()
+        self.initialize()
 
     def _validate_config(self) -> None:
         """Validate the transformer configuration.
@@ -60,6 +62,10 @@ class BaseTransformer(ABC):
 
         if not isinstance(self.validation_rules, list):
             raise TransformError("validation_rules must be a list")
+
+    def initialize(self) -> None:
+        """Optional method for complex initialization."""
+        pass
 
     def register_custom_transformer(
         self, field: str, transformer: Callable[[Any], Any]
@@ -399,3 +405,37 @@ class BaseTransformer(ABC):
         """
         results = await asyncio.gather(*(self.validate_record_async(record) for record in batch))
         return [record for record in results if record is not None]
+
+
+# Add PassthroughTransformer
+class PassthroughTransformer(BaseTransformer):
+    """A simple transformer that returns the input data unchanged."""
+
+    def initialize(self) -> None:
+        """No initialization needed."""
+        logger.debug("PassthroughTransformer initialized.")
+
+    def transform(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Return the input data without modification.
+
+        Args:
+            data: A dictionary representing a single record
+
+        Returns:
+            The original data dictionary.
+        """
+        # Simply return the data as is
+        return data
+
+    def bulk_transform(self, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Return the list of input data without modification.
+
+        Args:
+            data: A list of dictionaries representing records
+
+        Returns:
+            The original list of data dictionaries.
+        """
+        logger.debug(f"PassthroughTransformer bulk_transform called on {len(data)} records.")
+        # Return the list as is
+        return data

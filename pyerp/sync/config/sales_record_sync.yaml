@@ -25,11 +25,6 @@ sales_records:
         record_type:
           field: "Papierart"
           transform: "map_record_type"
-        customer:
-          field: "KundenNr"
-          lookup:
-            model: "pyerp.business_modules.sales.models.Customer"
-            field: "legacy_id"
         subtotal:
           field: "Netto"
           transform: "to_decimal"
@@ -55,6 +50,11 @@ sales_records:
         tax_type: "MWSt_Art"
         notes: "Text"
       lookups:
+        customer:
+          model: "pyerp.business_modules.sales.models.Customer"
+          fields:
+            legacy_id: "KundenNr"
+          get_or_create: true
         payment_terms:
           model: "pyerp.business_modules.sales.models.PaymentTerms"
           fields:

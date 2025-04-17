@@ -4,9 +4,9 @@ from typing import Dict, List, Optional
 import os
 import yaml
 
-from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
+from datetime import timedelta
 
 try:
     from celery import shared_task
@@ -15,7 +15,6 @@ except ImportError:
     def shared_task(func):
         return func
 
-from celery.schedules import crontab
 from pyerp.utils.logging import get_logger, log_data_sync_event
 
 from .models import SyncMapping, SyncSource, SyncTarget
@@ -29,18 +28,107 @@ from pyerp.external_api.legacy_erp.exceptions import LegacyERPError
 
 logger = get_logger(__name__)
 
+CONFIG_BASE_PATH = os.path.dirname(__file__)
+
+
+def _load_yaml_config(config_filename: str) -> Dict:
+    """Load sync configuration from a YAML file.
+
+    Args:
+        config_filename: The name of the YAML file in the config directory.
+
+    Returns:
+        Dict: The loaded configuration.
+    """
+    config_path = os.path.join(CONFIG_BASE_PATH, "config", config_filename)
+    try:
+        with open(config_path, "r") as f:
+            return yaml.safe_load(f) or {}
+    except FileNotFoundError:
+        logger.error(f"Configuration file not found: {config_path}")
+        return {}
+    except Exception as e:
+        logger.error(
+            f"Failed to load configuration from {config_path}: {e}", 
+            exc_info=True
+        )
+        return {}
+
+
+def _get_or_create_mapping(source_name: str, target_name: str, mapping_config: Dict) -> Optional[SyncMapping]:
+    """Get or create a SyncMapping object in the database.
+
+    Args:
+        source_name: Name of the SyncSource.
+        target_name: Name of the SyncTarget.
+        mapping_config: Dictionary containing the mapping details from YAML 
+                        (must include 'entity_type' and 'mapping_config').
+
+    Returns:
+        SyncMapping: The retrieved or created SyncMapping object, or None on error.
+    """
+    entity_type = mapping_config.get('entity_type')
+    config_data = mapping_config.get('mapping_config')
+    description = mapping_config.get('description')
+
+    if not entity_type or not config_data:
+        logger.error(
+            "Mapping config missing 'entity_type' or 'mapping_config'."
+        )
+        return None
+
+    try:
+        # Assume source and target exist (or create them if necessary)
+        # This part might need more robust logic depending on setup requirements
+        source, _ = SyncSource.objects.get_or_create(
+            name=source_name,
+            defaults={
+                "description": f"Source: {source_name}",
+                "config": {},
+                "active": True
+            }
+        )
+        target, _ = SyncTarget.objects.get_or_create(
+            name=target_name,
+            defaults={
+                "description": f"Target: {target_name}",
+                "config": {},
+                "active": True
+            }
+        )
+
+        mapping, created = SyncMapping.objects.update_or_create(
+            source=source,
+            target=target,
+            entity_type=entity_type,
+            defaults={
+                "mapping_config": config_data,
+                "description": description or f"{entity_type} sync",
+                "active": True  # Default to active when created/updated from config
+            }
+        )
+        if created:
+            logger.info(
+                f"Created new SyncMapping for {entity_type} from "
+                f"{source_name} to {target_name}."
+            )
+        else:
+            logger.info(
+                f"Updated existing SyncMapping for {entity_type} from "
+                f"{source_name} to {target_name}."
+            )
+        return mapping
+    except Exception as e:
+        logger.error(
+            f"Failed to get/create SyncMapping for {entity_type}: {e}",
+            exc_info=True
+        )
+        return None
+
 
 def _load_sales_record_yaml() -> Dict:
     """Load sales record sync configuration from YAML file."""
-    config_path = os.path.join(
-        os.path.dirname(__file__), "config", "sales_record_sync.yaml"
-    )
-    try:
-        with open(config_path, "r") as f:
-            return yaml.safe_load(f)
-    except Exception as e:
-        logger.error(f"Failed to load sales record sync config: {e}")
-        return {}
+    return _load_yaml_config("sales_record_sync.yaml")
 
 
 def get_sales_record_mappings():
@@ -120,7 +208,9 @@ def run_entity_sync(
         # Create pipeline and run sync
         pipeline = PipelineFactory.create_pipeline(mapping)
         sync_log = pipeline.run(
-            incremental=incremental, batch_size=batch_size, query_params=query_params
+            incremental=incremental, 
+            batch_size=batch_size, 
+            query_params=query_params
         )
 
         result = {
@@ -198,7 +288,9 @@ def run_all_mappings(
     # Launch a task for each mapping
     results = []
     for mapping in mappings:
-        task_result = run_entity_sync.delay(mapping.id, incremental=incremental)
+        task_result = run_entity_sync.delay(
+            mapping.id, incremental=incremental
+        )
         results.append(
             {
                 "mapping_id": mapping.id,
@@ -258,21 +350,25 @@ def run_full_sync() -> List[Dict]:
 
 @shared_task(name="sync.run_sales_record_sync")
 def run_sales_record_sync(
-    incremental: bool = True, batch_size: int = 100
+    incremental: bool = True, 
+    batch_size: int = 100,
+    days_to_sync: Optional[int] = None
 ) -> List[Dict]:
     """
     Run sync for sales records and their line items.
 
     Args:
-        incremental: If True, only sync records modified since last sync
-        batch_size: Number of records to process in each batch
+        incremental: If True, only sync records modified since last sync.
+        batch_size: Number of records to process in each batch.
+        days_to_sync: If provided, sync records from the last X days 
+                      (overrides incremental logic for date range).
 
     Returns:
         List of dicts with sync results
     """
     logger.info(
-        f"Starting {'incremental' if incremental else 'full'} "
-        f"sales record sync"
+        f"Starting sales record sync (Incremental: {incremental}, "
+        f"Days: {days_to_sync})"
     )
     log_data_sync_event(
         source="legacy_erp",
@@ -283,33 +379,105 @@ def run_sales_record_sync(
             "sync_type": "sales_records",
             "incremental": incremental,
             "batch_size": batch_size,
+            "days_to_sync": days_to_sync,
         },
     )
 
     results = []
 
-    # Get or create mappings
-    sales_record_mapping, sales_record_item_mapping = \
+    # Load mapping configurations from YAML first
+    sales_record_mapping_config, sales_record_item_mapping_config = \
         get_sales_record_mappings()
 
-    if not sales_record_mapping or not sales_record_item_mapping:
-        logger.info("Sales record mappings not found. Creating...")
-        sales_record_mapping, sales_record_item_mapping = \
-            create_sales_record_mappings()
+    if not sales_record_mapping_config or not sales_record_item_mapping_config:
+        logger.error(
+            "Failed to load sales record mapping configurations from YAML."
+        )
+        return [{"status": "error", "message": "YAML config load failed"}]
+
+    # Fetch the actual SyncMapping objects to get last sync time etc.
+    try:
+        sales_record_mapping = SyncMapping.objects.get(
+            entity_type=sales_record_mapping_config['entity_type'],
+            source__name=sales_record_mapping_config['source'],
+            target__name=sales_record_mapping_config['target']
+        )
+        sales_record_item_mapping = SyncMapping.objects.get(
+            entity_type=sales_record_item_mapping_config['entity_type'],
+            source__name=sales_record_item_mapping_config['source'],
+            target__name=sales_record_item_mapping_config['target']
+        )
+    except SyncMapping.DoesNotExist:
+        logger.error("SyncMapping objects not found in DB. Run initial setup?")
+        # Optionally try creating them here if that's desired flow
+        # sales_record_mapping, sales_record_item_mapping = \
+        #     create_sales_record_mappings()
+        # if not sales_record_mapping or not sales_record_item_mapping:
+        return [
+            {"status": "error", "message": "SyncMapping objects not found"}
+        ]
+    except Exception as e:
+        logger.error(f"Error fetching SyncMapping objects: {e}")
+        return [{"status": "error", "message": f"DB error: {e}"}]
+
+
+    # --- Determine Date Filter ---
+    sync_query_params = {}
+    start_date = None
+
+    if days_to_sync is not None and days_to_sync > 0:
+        start_date = timezone.now() - timedelta(days=days_to_sync)
+        logger.info(
+            f"Applying date filter: Syncing last {days_to_sync} days "
+            f"(since {start_date.isoformat()})"
+        )
+    elif incremental:
+        # Use the last successful sync time of the *parent* (SalesRecord)
+        # Fallback to a default (e.g., 7 days) if no successful sync found?
+        last_sync_time = sales_record_mapping.last_successful_sync
+        if last_sync_time:
+            start_date = last_sync_time
+            logger.info(
+                f"Applying incremental date filter: Since "
+                f"{start_date.isoformat()}"
+            )
+        else:
+            # Fallback: Sync last 7 days if no previous successful sync
+            start_date = timezone.now() - timedelta(days=7)
+            logger.warning(
+                f"No last successful sync found for SalesRecord mapping. "
+                f"Defaulting to last 7 days (since {start_date.isoformat()})"
+            )
+    else:  # Full sync without days_to_sync
+        logger.info("Running full sync without date filter.")
+        # No date filter applied (start_date remains None)
+
+    if start_date:
+        # Assuming 'Datum' is the correct field in the legacy API
+        # The extractor expects {'field': {'operator': value}}
+        # Note: Extractor formats the date value based on operator
+        sync_query_params['Datum'] = {'gte': start_date}
+    # --- End Determine Date Filter ---
+
 
     # Sync sales records
     if sales_record_mapping:
         logger.info(
-            f"Running sales record sync (mapping ID: {sales_record_mapping.id})"
+            f"Running sales record sync (mapping ID: "
+            f"{sales_record_mapping.id})"
         )
         record_result = run_entity_sync(
             mapping_id=sales_record_mapping.id,
-            incremental=incremental,
+            incremental=incremental,  # Keep for logging/potential future use
             batch_size=batch_size,
+            query_params=sync_query_params  # Pass the constructed params
         )
         results.append(record_result)
 
-    # Sync line items
+    # Sync line items - Reuse the same query params (date filter)
+    # Assumes line items don't have their own date field to filter by directly
+    # and are implicitly filtered by their parent's date.
+    # If items *do* have a filterable date, adjust params here.
     if sales_record_item_mapping:
         logger.info(
             f"Running sales record line item sync "
@@ -319,6 +487,7 @@ def run_sales_record_sync(
             mapping_id=sales_record_item_mapping.id,
             incremental=incremental,
             batch_size=batch_size,
+            query_params=sync_query_params  # Pass the same params
         )
         results.append(item_result)
 
@@ -390,15 +559,7 @@ def run_full_sales_record_sync() -> List[Dict]:
 
 def _load_production_yaml() -> Dict:
     """Load production sync configuration from YAML file."""
-    config_path = os.path.join(
-        os.path.dirname(__file__), "config", "production_sync.yaml"
-    )
-    try:
-        with open(config_path, "r") as f:
-            return yaml.safe_load(f)
-    except Exception as e:
-        logger.error(f"Failed to load production sync config: {e}")
-        return {}
+    return _load_yaml_config("production_sync.yaml")
 
 
 def get_production_mappings():
@@ -427,7 +588,8 @@ def create_production_mappings():
     """Create or update production related sync mappings in the database.
     
     Returns:
-        Tuple containing (production_order_mapping_id, production_order_item_mapping_id)
+        Tuple containing (production_order_mapping_id, 
+                        production_order_item_mapping_id)
     """
     try:
         production_order_config, production_order_item_config = \
@@ -455,7 +617,8 @@ def create_production_mappings():
                 target__name=production_order_item_config["target"],
                 entity_type=production_order_item_config["entity_type"],
                 defaults={
-                    "mapping_config": production_order_item_config["mapping_config"]
+                    "mapping_config": 
+                        production_order_item_config["mapping_config"]
                 },
             )
         
@@ -591,15 +754,7 @@ def run_full_production_sync(
 
 def _load_business_yaml() -> Dict:
     """Load business data sync configuration from YAML file."""
-    config_path = os.path.join(
-        os.path.dirname(__file__), "config", "business_sync.yaml"
-    )
-    try:
-        with open(config_path, "r") as f:
-            return yaml.safe_load(f)
-    except Exception as e:
-        logger.error(f"Failed to load business sync config: {e}")
-        return {}
+    return _load_yaml_config("business_sync.yaml")
 
 
 def get_employee_mapping():
@@ -818,7 +973,9 @@ def sync_employees(
             "mapping_id": mapping.id,
             "sync_log_id": result.id,
             "records_processed": result.records_processed,
-            "records_succeeded": result.records_succeeded,
+            "records_succeeded": getattr(result, 'records_succeeded', 0),
+            "records_created": getattr(result, 'records_created', 0),
+            "records_updated": getattr(result, 'records_updated', 0),
             "records_failed": result.records_failed
         }
         
@@ -876,7 +1033,6 @@ def sync_molds(
     # For now, we fetch all records but could add timestamp filtering based 
     # on last successful sync
     fetch_all = not incremental  # Simplistic approach for now
-    last_sync_time = None
     # TODO: Get last successful sync time for 'mold' entity
 
     try:
@@ -1149,3 +1305,281 @@ def sync_mold_products(
         details=result,
     )
     return result
+
+
+def run_pipeline_from_config(config_path: str, task_name: str) -> Dict:
+    """Helper function to load config and run a pipeline."""
+    logger.info(f"Starting pipeline run for task: {task_name}")
+    
+    # Construct full path to config file
+    full_config_path = os.path.join(
+        os.path.dirname(__file__), "config", config_path
+    )
+    
+    try:
+        with open(full_config_path, "r") as f:
+            config = yaml.safe_load(f)
+    except FileNotFoundError:
+        logger.error(f"Configuration file not found: {full_config_path}")
+        return {
+            "status": "failed", 
+            "error": f"Config file not found: {config_path}"
+        }
+    except Exception as e:
+        logger.error(
+            f"Error loading configuration from {full_config_path}: {e}"
+        )
+        return {"status": "failed", "error": f"Error loading config: {e}"}
+
+    if not config:
+        logger.error(
+            f"Configuration file {full_config_path} is empty or invalid."
+        )
+        return {"status": "failed", "error": "Empty or invalid config file"}
+    
+    pipeline_name = config.get("pipeline_name", "Unnamed Pipeline")
+    logger.info(f"Loaded config for pipeline: {pipeline_name}")
+
+    try:
+        pipeline = PipelineFactory.create_pipeline_from_config(config)
+        # For now, config-based pipelines run full sync by default
+        # TODO: Add support for incremental sync based on config?
+        sync_log = pipeline.run(incremental=False) 
+
+        result = {
+            "status": sync_log.status,
+            "pipeline_name": pipeline_name,
+            "records_processed": sync_log.records_processed,
+            "records_created": getattr(sync_log, 'records_created', 0),
+            "records_updated": getattr(sync_log, 'records_updated', 0),
+            "records_failed": sync_log.records_failed,
+            "sync_log_id": sync_log.id,
+        }
+
+        log_data_sync_event(
+            source=config.get('extractor', {}).get('class', 'unknown'),
+            destination=config.get('loader', {}).get('class', 'unknown'),
+            record_count=sync_log.records_processed,
+            status=sync_log.status,
+            details={
+                "pipeline_name": pipeline_name,
+                "config_file": config_path,
+                "sync_log_id": sync_log.id,
+                **result,
+            },
+        )
+        logger.info(
+            f"Pipeline {pipeline_name} finished with status: {sync_log.status}"
+        )
+        return result
+
+    except Exception as e:
+        logger.error(
+            f"Error running pipeline {pipeline_name} from "
+            f"config {config_path}: {e}",
+            exc_info=True
+        )
+        error_msg = f"Error running pipeline {pipeline_name}: {e}"
+        log_data_sync_event(
+            source=config.get('extractor', {}).get('class', 'unknown'),
+            destination=config.get('loader', {}).get('class', 'unknown'),
+            record_count=0,
+            status="failed",
+            details={
+                "pipeline_name": pipeline_name,
+                "config_file": config_path,
+                "error": error_msg
+            },
+        )
+        # Depending on celery config, this might trigger retry
+        raise 
+
+
+@shared_task(
+    bind=True,
+    name="sync.sync_bhb_creditors_to_supplier",
+    max_retries=2,
+    default_retry_delay=300,  # Retry after 5 minutes
+    autoretry_for=(Exception,),  # Retry on any exception
+    retry_backoff=True,
+)
+def sync_bhb_creditors_to_supplier(self) -> Dict:
+    """Runs the BHB Creditor to Business Supplier sync pipeline."""
+    config_path = os.path.join(
+        os.path.dirname(__file__),
+        "config",
+        "buchhaltungsbutler_creditor_sync.yaml"
+    )
+    return run_pipeline_from_config(
+        config_path=config_path,
+        task_name=self.name # Pass task name for logging
+    )
+
+
+@shared_task(
+    bind=True,
+    name="sync.sync_buchhaltungsbutler_receipt_status",
+    max_retries=2,
+    default_retry_delay=300,  # Retry after 5 minutes
+    autoretry_for=(Exception,),  # Retry on any exception
+    retry_backoff=True,
+)
+def sync_buchhaltungsbutler_receipt_status(self) -> Dict:
+    """
+    Runs the BuchhaltungsButler Receipt to SalesRecord Status sync pipeline.
+    """
+    config_path = os.path.join(
+        os.path.dirname(__file__),
+        "config",
+        "buchhaltungsbutler_receipt_status_sync.yaml"
+    )
+    return run_pipeline_from_config(
+        config_path=config_path,
+        task_name=self.name # Pass task name for logging
+    )
+
+
+@shared_task(name="sync.run_buchhaltungs_buttler_sync")
+def run_buchhaltungs_buttler_sync(
+    incremental: bool = True,
+    batch_size: int = 100,
+    query_params: Optional[Dict] = None,
+    # e.g., ['bhb_creditor', 'bhb_receipt_inbound']
+    entity_types: Optional[List[str]] = None
+) -> List[Dict]:
+    """Run synchronization for BuchhaltungsButler data based on YAML config.
+
+    Loads mappings from buchhaltungs_buttler_sync.yaml, ensures corresponding
+    SyncMapping objects exist in the DB, and then triggers the generic
+    run_entity_sync task for each requested entity type.
+
+    Args:
+        incremental: If True, attempt incremental sync for each mapping.
+        batch_size: Number of records to process in each batch for each mapping.
+        query_params: Optional global query parameters (use with caution).
+        entity_types: Specific entity types from the config to sync.
+                      If None, sync all configured entities.
+
+    Returns:
+        List of dicts containing triggered task info for each entity.
+    """
+    logger.info(
+        f"Starting BuchhaltungsButler sync dispatcher "
+        f"(Incremental: {incremental}, Entities: {entity_types or 'all'})"
+    )
+    config_file = "buchhaltungs_buttler_sync.yaml"
+    config = _load_yaml_config(config_file)
+    mappings_in_config = config.get("mappings", [])
+
+    if not mappings_in_config:
+        logger.error(f"No mappings found in {config_file}.")
+        return [{
+            "status": "error", 
+            "message": f"No mappings found in {config_file}"
+        }]
+
+    triggered_tasks = []
+    sync_errors = []
+    processed_entity_types = set()
+
+    for mapping_detail in mappings_in_config:
+        entity_type = mapping_detail.get('entity_type')
+        source_name = mapping_detail.get('source')
+        target_name = mapping_detail.get('target')
+
+        if not all([entity_type, source_name, target_name]):
+            logger.warning(
+                f"Skipping incomplete mapping entry in {config_file}: "
+                f"{mapping_detail.get('description', '{no desc}')}"
+            )
+            sync_errors.append(
+                f"Skipped incomplete mapping: {entity_type or '?'}"
+            )
+            continue
+
+        # Filter by requested entity types if provided
+        if entity_types is not None and entity_type not in entity_types:
+            continue
+
+        processed_entity_types.add(entity_type)
+
+        # Get or create the SyncMapping object in the database from config
+        sync_mapping = _get_or_create_mapping(
+            source_name, target_name, mapping_detail
+        )
+
+        if not sync_mapping:
+            logger.error(
+                f"Failed to get or create DB mapping for {entity_type}. "
+                f"Skipping sync."
+            )
+            sync_errors.append(f"DB Mapping failed for {entity_type}")
+            continue
+
+        if not sync_mapping.active:
+            logger.info(
+                f"Skipping inactive mapping for {entity_type} "
+                f"(ID: {sync_mapping.id})."
+            )
+            continue
+
+        # Trigger the generic sync task for this mapping
+        try:
+            task_result = run_entity_sync.delay(
+                mapping_id=sync_mapping.id,
+                incremental=incremental,
+                batch_size=batch_size,
+                query_params=query_params # Pass global params if any
+            )
+            logger.info(
+                f"Triggered run_entity_sync for {entity_type} "
+                f"(Mapping ID: {sync_mapping.id}, Task ID: {task_result.id})"
+            )
+            triggered_tasks.append({
+                "mapping_id": sync_mapping.id,
+                "entity_type": entity_type,
+                "status": "scheduled",
+                "task_id": task_result.id,
+            })
+        except Exception as e:
+            logger.error(
+                f"Failed to trigger run_entity_sync for {entity_type} "
+                f"(Mapping ID: {sync_mapping.id}): {e}",
+                exc_info=True
+            )
+            sync_errors.append(f"Task trigger failed for {entity_type}: {e}")
+
+    # Check if any requested entity types were not found in the config
+    if entity_types is not None:
+        not_found = set(entity_types) - processed_entity_types
+        if not_found:
+            msg = f"Requested entity types not found in {config_file}: {not_found}"
+            logger.warning(msg)
+            sync_errors.append(msg)
+
+    # Log overall dispatcher result
+    final_status = "completed_with_errors" if sync_errors else "completed"
+    log_data_sync_event(
+        source="buchhaltungs_buttler", # Or more specific if needed
+        destination="pyerp",
+        record_count=len(triggered_tasks),
+        status=final_status,
+        details={
+            "message": f"Dispatcher finished. Triggered {len(triggered_tasks)} sync tasks.",
+            "incremental": incremental,
+            "requested_entities": entity_types or "all",
+            "triggered_tasks": triggered_tasks,
+            "errors": sync_errors,
+        }
+    )
+
+    # Return info about triggered tasks and any errors during dispatch
+    if sync_errors:
+         triggered_tasks.append({"status": "error", "errors": sync_errors})
+    return triggered_tasks
+
+
+# --- Periodic Task Schedule ---
+
+# Add new tasks to Celery Beat schedule in django settings
+# (e.g., settings/base.py -> CELERY_BEAT_SCHEDULE)
