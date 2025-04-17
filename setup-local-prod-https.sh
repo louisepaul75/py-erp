@@ -46,6 +46,12 @@ cp -r ./docker/nginx/conf.d /tmp/ # Copy the conf.d directory which should conta
 echo "Building and starting production containers locally via rebuild script..."
 ./rebuild_docker.prod.sh --no-monitoring --no-tests --local-https --profile-memory
 
+# Check if the rebuild script was successful
+if [ $? -ne 0 ]; then
+  echo "Error: rebuild_docker.prod.sh failed. Aborting setup."
+  exit 1
+fi
+
 # Give container a moment to start up before copying files
 sleep 5
 

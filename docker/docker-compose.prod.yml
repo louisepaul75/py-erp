@@ -28,7 +28,6 @@ services:
       - es_data:/var/lib/elasticsearch
     networks:
       - default
-      - supabase_default # Connect to the external Supabase network
     dns_search: .
     healthcheck:
       test: curl --fail http://localhost:8000/admin/ || exit 1
@@ -68,5 +67,5 @@ volumes:
 networks:
   default:
     driver: bridge
-  supabase_default:
-    external: true
+  # supabase_default:
+  #   external: true
