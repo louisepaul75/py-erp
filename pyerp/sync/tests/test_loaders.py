@@ -242,7 +242,7 @@ class TestDjangoModelLoader:
         result = loader.load_record(lookup_criteria, record)
         
         # Verify mock calls
-        mock_model.objects.filter.assert_called_once_with(**lookup_criteria)
+        # mock_model.objects.filter.assert_called_once_with(**lookup_criteria) # Filter call moved to load() method
         assert result is mock_model_instance
         mock_model_instance.full_clean.assert_called_once()
         mock_model_instance.save.assert_called_once()
@@ -276,7 +276,7 @@ class TestDjangoModelLoader:
         result = loader.load_record(lookup_criteria, record)
         
         # Verify mock calls
-        mock_model.objects.filter.assert_called_once_with(**lookup_criteria)
+        # mock_model.objects.filter.assert_called_once_with(**lookup_criteria) # Filter call moved to load() method
         assert result is mock_model_instance
         mock_model_instance.full_clean.assert_called_once()
         mock_model_instance.save.assert_called_once()

@@ -410,11 +410,8 @@ def test_build_date_filter_query_with_invalid_operator(mock_logger):
     result = extractor._build_date_filter_query('some_date', date_filters['some_date'])
     assert result == [] # Should skip the invalid operator
     # Check if the specific warning message was recorded
-    expected_msg = "Unknown date filter operator 'invalid_op' for key 'some_date', skipping."
-    mock_logger.warning.assert_any_call(
-        "Unknown date filter operator '%s' for key '%s', skipping.",
-        'invalid_op', 'some_date'
-    )
+    expected_fstring_msg = f"Unknown date filter operator 'invalid_op' for key 'some_date', skipping."
+    mock_logger.warning.assert_any_call(expected_fstring_msg)
 
 
 @pytest.mark.unit
