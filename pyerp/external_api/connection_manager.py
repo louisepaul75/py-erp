@@ -31,6 +31,9 @@ DEFAULT_CONNECTIONS = {
     "images_cms": False,
     "fx_sync": True,
     "buchhaltungs_buttler": False,
+    "zebra_day": False,
+    "kibana_elastic": False,
+    "frankfurter_api": False,
 }
 
 
@@ -40,8 +43,10 @@ def get_connections() -> Dict[str, bool]:
 
     Returns:
         Dict[str, bool]: A dictionary mapping connection names to their
-        enabled status.
+        enabled status. Merges defaults for any missing keys.
     """
+    current_connections = DEFAULT_CONNECTIONS.copy()  # Start with defaults
+
     if not CONNECTIONS_FILE.exists():
         # Create the directory if it doesn't exist
         CONNECTIONS_FILE.parent.mkdir(exist_ok=True)
@@ -51,7 +56,17 @@ def get_connections() -> Dict[str, bool]:
 
     try:
         with open(CONNECTIONS_FILE, "r") as f:
-            return json.load(f)
+            loaded_connections = json.load(f)
+            # Override defaults with loaded values
+            current_connections.update(loaded_connections)
+            # Ensure all default keys are present even if file was older
+            for key, default_value in DEFAULT_CONNECTIONS.items():
+                if key not in current_connections:
+                    current_connections[key] = default_value
+            # Optional: Prune keys in the file that are no longer in
+            # defaults? For now, we keep them to avoid data loss if a
+            # default is temporarily removed.
+            return current_connections
     except (json.JSONDecodeError, IOError) as e:
         logger.error(f"Error reading connections file: {e}")
         # Return defaults if there's an error
