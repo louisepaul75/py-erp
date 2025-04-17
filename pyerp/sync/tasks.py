@@ -973,6 +973,7 @@ def sync_employees(
             "mapping_id": mapping.id,
             "sync_log_id": result.id,
             "records_processed": result.records_processed,
+            "records_succeeded": getattr(result, 'records_succeeded', 0),
             "records_created": getattr(result, 'records_created', 0),
             "records_updated": getattr(result, 'records_updated', 0),
             "records_failed": result.records_failed

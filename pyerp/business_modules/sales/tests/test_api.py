@@ -7,10 +7,12 @@ from pyerp.business_modules.sales.models import (
     SalesRecord, SalesRecordRelationship, Customer
 )
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 
 User = get_user_model()
 
 
+@override_settings(ROOT_URLCONF='pyerp.urls')
 class SalesRecordRelationshipAPITests(TransactionTestCase):
 
     def setUp(self):
@@ -147,6 +149,7 @@ class SalesRecordRelationshipAPITests(TransactionTestCase):
             SalesRecordRelationship.objects.get(pk=rel_pk_to_delete)
 
 
+@override_settings(ROOT_URLCONF='pyerp.urls')
 class SalesRecordFlowDataAPITests(TransactionTestCase):
 
     def setUp(self):
