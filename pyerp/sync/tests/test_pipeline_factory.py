@@ -141,8 +141,13 @@ class TestPipelineFactory(TestCase):
         self.assertEqual(mock_create_component.call_count, 3)
 
         # Check that SyncPipeline was called once with expected components
-        # Using ANY for components as direct comparison might still be fragile
-        mock_pipeline_class.assert_called_once_with(self.mapping, mock.ANY, mock.ANY, mock.ANY)
+        # Check using keyword arguments as the actual call uses them
+        mock_pipeline_class.assert_called_once_with(
+            mapping=self.mapping,
+            extractor=mock.ANY,
+            transformer=mock.ANY,
+            loader=mock.ANY
+        )
         
         # Check that pipeline is the mocked instance
         self.assertEqual(pipeline, mock_pipeline_instance)

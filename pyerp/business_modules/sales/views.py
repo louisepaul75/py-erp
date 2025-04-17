@@ -373,9 +373,11 @@ class SalesRecordViewSet(viewsets.ModelViewSet):
         for day_num, values in past_5_years_cumulative.items():
             count = valid_years_count.get(day_num, 0)
             if count > 0:
-                avg_5_years_cumulative_data[day_num] = sum(values) / count
+                # Explicitly calculate sum and divide by count, ensuring float division
+                total_sum = sum(values)
+                avg_5_years_cumulative_data[day_num] = float(total_sum) / count
             else:
-                avg_5_years_cumulative_data[day_num] = 0  # Default to 0
+                avg_5_years_cumulative_data[day_num] = 0.0
 
         # --- Combine Data ---
         data = []
@@ -560,9 +562,11 @@ class SalesRecordViewSet(viewsets.ModelViewSet):
         for month_num, values in past_5_years_cumulative.items():
             count = valid_years_count.get(month_num, 0)
             if count > 0:
-                avg_5_years_cumulative_data[month_num] = sum(values) / count
+                # Explicitly calculate sum and divide by count, ensuring float division
+                total_sum = sum(values)
+                avg_5_years_cumulative_data[month_num] = float(total_sum) / count
             else:
-                avg_5_years_cumulative_data[month_num] = 0
+                avg_5_years_cumulative_data[month_num] = 0.0
 
         # --- Combine Data ---
         data = []

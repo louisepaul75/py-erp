@@ -265,9 +265,9 @@ class TestSalesRecordViewSetAnalytics:
         )
 
         # Check 5-year average cumulative for today's date's position
-        # Only one record 5 years ago in this setup
-        # Average over 1 year found
-        expected_5_year_avg_cumulative = Decimal("500.00") / 1
+        # Average includes data from year-1 (450.0) and year-5 (500.0)
+        # Average over 2 years found for this day
+        expected_5_year_avg_cumulative = (Decimal("450.00") + Decimal("500.00")) / 2
         assert today_entry["cumulative_avg_5_years"] == pytest.approx(
             float(expected_5_year_avg_cumulative)
         )
