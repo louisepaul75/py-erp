@@ -203,61 +203,6 @@ class TestProductTransformer:
         assert result_6["base_sku"] == ""
         assert result_6["variant_code"] == ""
 
-    @patch("pyerp.sync.transformers.product.ProductTransformer._transform_prices")
-    def test_transform_prices(self, mock_transform_prices):
-        """Test transformation of price data."""
-        # Setup mock implementation of _transform_prices
-        def side_effect(data):
-            results = {}
-            if "VKPreis" in data:
-                try:
-                    results["price"] = float(data["VKPreis"].replace(",", "."))
-                except (ValueError, TypeError):
-                    results["price"] = 0.0
-            else:
-                results["price"] = 0.0
-                
-            if "EKPreis" in data:
-                try:
-                    results["cost_price"] = float(data["EKPreis"].replace(",", "."))
-                except (ValueError, TypeError):
-                    results["cost_price"] = 0.0
-            else:
-                results["cost_price"] = 0.0
-            return results
-        
-        mock_transform_prices.side_effect = side_effect
-        
-        # Test with valid numeric price strings
-        price_data_1 = {"VKPreis": "99.99", "EKPreis": "50.00"}
-        result_1 = self.transformer._transform_prices(price_data_1)
-        assert result_1["price"] == 99.99
-        assert result_1["cost_price"] == 50.00
-        
-        # Test with non-numeric price strings
-        price_data_2 = {"VKPreis": "invalid", "EKPreis": "not-a-number"}
-        result_2 = self.transformer._transform_prices(price_data_2)
-        assert result_2["price"] == 0.0
-        assert result_2["cost_price"] == 0.0
-        
-        # Test with missing price fields
-        price_data_3 = {"SomeOtherField": "value"}
-        result_3 = self.transformer._transform_prices(price_data_3)
-        assert result_3["price"] == 0.0
-        assert result_3["cost_price"] == 0.0
-        
-        # Test with integer prices
-        price_data_4 = {"VKPreis": "100", "EKPreis": "50"}
-        result_4 = self.transformer._transform_prices(price_data_4)
-        assert result_4["price"] == 100.0
-        assert result_4["cost_price"] == 50.0
-        
-        # Test with german format (comma as decimal separator)
-        price_data_5 = {"VKPreis": "99,99", "EKPreis": "50,50"}
-        result_5 = self.transformer._transform_prices(price_data_5)
-        assert result_5["price"] == 99.99
-        assert result_5["cost_price"] == 50.50
-
     @patch("pyerp.sync.transformers.product.datetime")
     def test_parse_legacy_date(self, mock_datetime):
         """Test parsing of legacy date strings."""

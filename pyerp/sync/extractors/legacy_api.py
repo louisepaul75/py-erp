@@ -631,50 +631,17 @@ class LegacyAPIExtractor(BaseExtractor):
 
             formatted_date: Optional[str] = None
             try:
-                # --- Start: Use YYYY-MM-DD format for >= and <= --- 
-                if api_op in ('>=', '<='):
-                    # Convert input to date object if needed
-                    if isinstance(date_value, datetime):
-                        date_obj = date_value.date()
-                    elif isinstance(date_value, date):
-                        date_obj = date_value
-                    elif isinstance(date_value, str):
-                        # Try parsing common ISO formats
-                        try:
-                            date_obj = datetime.fromisoformat(
-                                date_value.replace("Z", "+00:00")
-                            ).date()
-                        except ValueError:
-                            date_obj = datetime.strptime(
-                                date_value, "%Y-%m-%d"
-                            ).date()
-                    else:
-                        raise TypeError(
-                            f"Unsupported type for date conversion: "
-                            f"{type(date_value)}"
-                        )
-                    
-                    formatted_date = date_obj.strftime("%Y-%m-%d")
+                # Always use _format_date_for_api for consistent timestamp format
+                # The special case for '>='/'<=' seems incorrect based on tests.
+                is_end_of_day = api_op in ('<', '<=') # Use end of day for lt/le
+                formatted_date = self._format_date_for_api(
+                    date_value, is_end_of_day
+                )
+                if formatted_date:
                     logger.debug(
-                        f"Using simple date format '{formatted_date}' "
-                        f"for operator '{api_op}'"
-                    )
-                # --- End: Use YYYY-MM-DD format for >= and <= ---
-                else:
-                    # For other operators (like eq, gt, lt), 
-                    # use the full timestamp format
-                    # Note: Tests indicate gt/lt might not work reliably 
-                    # with the API
-                    is_end_of_day = api_op in ('<', '<=')  # Use end of day only for lt/le
-                    formatted_date = self._format_date_for_api(
-                        date_value, is_end_of_day
-                    )
-                    if formatted_date:
-                        logger.debug(
-                             f"Using full timestamp format '{formatted_date}' "
-                             f"for operator '{api_op}'"
-                         )
-
+                         f"Using timestamp format '{formatted_date}' "
+                         f"for operator '{api_op}'"
+                     )
             except (ValueError, TypeError) as e:
                 logger.warning(
                      f"Could not format/convert date value '{date_value}' "

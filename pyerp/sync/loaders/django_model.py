@@ -254,10 +254,6 @@ class DjangoModelLoader(BaseLoader):
                                 f"(type: {type(value).__name__})"
                             )
                         
-                        # Only update if the value has actually changed to 
-                        # avoid unnecessary DB hits. Although this might mask
-                        # issues if the value is None and should be set.
-                        # Let's temporarily update all fields from the record
                         current_value = getattr(instance, field, None)
                         if current_value != value:
                             setattr(instance, field, value)
@@ -324,11 +320,13 @@ class DjangoModelLoader(BaseLoader):
 
                     instance = model_class(**filtered_record)
 
+                # *** Add full_clean() call here before saving ***
+                instance.full_clean() 
+
                 # Validate and save
                 try:
                     # Pass update_fields to save() if we were tracking changes
                     if instance and not instance._state.adding: # Existing instance
-                        instance.full_clean()
                         # Save with specific fields if they changed, otherwise save all
                         # fields to trigger auto_now updates.
                         if update_fields_list:
@@ -344,7 +342,6 @@ class DjangoModelLoader(BaseLoader):
                                 f"to update auto_now fields."
                             )
                     elif instance and instance._state.adding:  # This is a new instance
-                        instance.full_clean()
                         instance.save()
                         logger.debug(" -> Saved new instance.")
                     elif instance:  # Existing instance but no fields changed

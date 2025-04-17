@@ -434,8 +434,9 @@ def test_build_date_filter_query_multiple_operators(mock_logger):
     ]
     assert sorted(result) == sorted(expected)
     # Check if the warning for the invalid operator was logged
-    expected_warning_fmt = "Unknown date filter operator '%s' for key '%s', skipping."
-    mock_logger.warning.assert_any_call(expected_warning_fmt, 'invalid', 'event_date')
+    # Use the actual f-string logged by the code
+    expected_warning_msg = f"Unknown date filter operator 'invalid' for key 'event_date', skipping."
+    mock_logger.warning.assert_any_call(expected_warning_msg)
     # Check that the INFO log for building the valid parts was logged
     expected_info_fmt = "Building date filter conditions for key: %s with dict: %s"
     mock_logger.info.assert_any_call(expected_info_fmt, 'event_date', date_filters['event_date'])

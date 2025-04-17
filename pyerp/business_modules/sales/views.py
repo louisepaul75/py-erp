@@ -336,7 +336,8 @@ class SalesRecordViewSet(viewsets.ModelViewSet):
 
         # --- 5-Year Average ---
         past_5_years_cumulative = {}  # {day_num: [cumulative1, ...]}
-        valid_years_count = {}  # {day_num: count}
+        # Use a new dictionary to track years with actual data for the average count
+        valid_years_data_exists = {}  # {day_num: count_of_years_with_data}
 
         # Ensure we check date validity for each year (e.g., leap years)
         # Add try-except block for earliest record query
@@ -361,22 +362,40 @@ class SalesRecordViewSet(viewsets.ModelViewSet):
             past_cumulative, num_days_past = get_cumulative_daily_data(
                 target_year, month
             )
+            # Check if ANY data was returned for this year
+            year_had_data = bool(past_cumulative)
+
             for day_num in range(1, num_days_past + 1):
                 cumulative_val = past_cumulative.get(day_num, 0)
+
                 if day_num not in past_5_years_cumulative:
                     past_5_years_cumulative[day_num] = []
-                    valid_years_count[day_num] = 0
+                    valid_years_data_exists[day_num] = 0 # Initialize count for this day
+
+                # Always append the cumulative value (could be 0)
                 past_5_years_cumulative[day_num].append(cumulative_val)
-                valid_years_count[day_num] += 1
+
+                # Increment count for this day ONLY if the year had any data at all
+                if year_had_data:
+                     valid_years_data_exists[day_num] += 1
 
         avg_5_years_cumulative_data = {}
         for day_num, values in past_5_years_cumulative.items():
-            count = valid_years_count.get(day_num, 0)
+            # Use the count of years that actually had data
+            count = valid_years_data_exists.get(day_num, 0)
             if count > 0:
                 # Explicitly calculate sum and divide by count, ensuring float division
                 total_sum = sum(values)
-                avg_5_years_cumulative_data[day_num] = float(total_sum) / count
+                calculated_avg = float(total_sum) / count
+                # --- Add Detailed Logging --- 
+                print(
+                    f"Debug Avg Calc: Day={day_num}, Values={values}, "
+                    f"Count={count}, Sum={total_sum}, Avg={calculated_avg}"
+                )
+                # --- End Logging ---
+                avg_5_years_cumulative_data[day_num] = calculated_avg
             else:
+                # No years with data found for this day_num
                 avg_5_years_cumulative_data[day_num] = 0.0
 
         # --- Combine Data ---
@@ -564,7 +583,14 @@ class SalesRecordViewSet(viewsets.ModelViewSet):
             if count > 0:
                 # Explicitly calculate sum and divide by count, ensuring float division
                 total_sum = sum(values)
-                avg_5_years_cumulative_data[month_num] = float(total_sum) / count
+                calculated_avg = float(total_sum) / count
+                # --- Add Detailed Logging --- 
+                print(
+                    f"Debug Avg Calc: Day={month_num}, Values={values}, "
+                    f"Count={count}, Sum={total_sum}, Avg={calculated_avg}"
+                )
+                # --- End Logging ---
+                avg_5_years_cumulative_data[month_num] = calculated_avg
             else:
                 avg_5_years_cumulative_data[month_num] = 0.0
 
