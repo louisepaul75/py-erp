@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Product, ApiResponse } from '@/components/types/product';
 import { UseQueryResult } from '@tanstack/react-query';
+import { ProductFilters } from '@/components/products/product-filter-dialog';
 
 type SortDirection = 'asc' | 'desc';
 
@@ -16,6 +17,7 @@ interface UseProductsTableProps {
   pagination: { pageIndex: number; pageSize: number };
   initialSortKey?: keyof Product | null;
   initialSortDirection?: SortDirection;
+  initialFilters?: ProductFilters;
 }
 
 interface UseProductsTableReturn {
@@ -34,7 +36,43 @@ interface UseProductsTableReturn {
   goToNextPage: () => void;
   goToPreviousPage: () => void;
   isFetching: boolean;
+  filters: ProductFilters;
+  setFilters: (filters: ProductFilters) => void;
 }
+
+// Default filters
+const defaultFilters: ProductFilters = {
+  isActive: null,
+  hasVariants: null,
+  productType: 'all',
+};
+
+// Filter function for products
+const productFilterFunction = (product: Product, filters: ProductFilters): boolean => {
+  // Filter by active status
+  if (filters.isActive !== null) {
+    if (filters.isActive !== product.is_active) {
+      return false;
+    }
+  }
+
+  // Filter by variants
+  if (filters.hasVariants !== null) {
+    const hasVariants = product.variants_count > 0;
+    if (filters.hasVariants !== hasVariants) {
+      return false;
+    }
+  }
+
+  // Filter by product type (this is a placeholder, adjust based on your actual data model)
+  if (filters.productType !== 'all') {
+    // This is a placeholder. In a real implementation, you would check the product type
+    // For example: if (filters.productType !== product.type) return false;
+    // Since we don't have product type in the current model, this is just a placeholder
+  }
+
+  return true;
+};
 
 export function useProductsTable({
   productsQuery,
@@ -43,6 +81,7 @@ export function useProductsTable({
   pagination,
   initialSortKey = null,
   initialSortDirection = 'asc',
+  initialFilters = defaultFilters,
 }: UseProductsTableProps): UseProductsTableReturn {
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: initialSortKey,
@@ -50,6 +89,7 @@ export function useProductsTable({
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [filters, setFilters] = useState<ProductFilters>(initialFilters);
 
   // Debounce search term with a longer delay (800ms) for large datasets
   useEffect(() => {
@@ -100,22 +140,29 @@ export function useProductsTable({
   // Get products from query result
   const rawProducts = productsQuery.data?.results ?? [];
   
-  // Apply client-side sorting
-  console.log(" products before sorting", rawProducts)
+  // Apply client-side filtering and sorting
   const processedProducts = useMemo(() => {
+    // First, filter the products
+    let filteredProducts = [...rawProducts];
+    
+    // Apply filters
+    filteredProducts = filteredProducts.filter(product => 
+      productFilterFunction(product, filters)
+    );
+    
+    console.log(`Filtered products: ${filteredProducts.length} of ${rawProducts.length}`);
+    
+    // Then sort the filtered products
     if (!sortConfig.key) {
-      return rawProducts;
+      return filteredProducts;
     }
     
-    console.log(`Sorting ${rawProducts.length} products by ${String(sortConfig.key)}`);
+    console.log(`Sorting ${filteredProducts.length} products by ${String(sortConfig.key)}`);
     
-    const sortedProducts = [...rawProducts].sort((a, b) => {
+    const sortedProducts = [...filteredProducts].sort((a, b) => {
       const aValue = a[sortConfig.key!];
       const bValue = b[sortConfig.key!];
       
-      // Log the values being compared for debugging
-      // console.log(`Comparing: ${String(aValue)} vs ${String(bValue)}`);
-
       // Handle null/undefined values (always sort to the end)
       if (aValue === null || aValue === undefined) {
         return sortConfig.direction === 'asc' ? 1 : -1;
@@ -143,11 +190,15 @@ export function useProductsTable({
       return String(aValue).localeCompare(String(bValue)) * (sortConfig.direction === 'asc' ? 1 : -1);
     });
     
-    console.log(`Sorted products (first 3):`, sortedProducts.slice(0, 3));
     return sortedProducts;
-  }, [rawProducts, sortConfig]);
+  }, [rawProducts, sortConfig, filters]);
 
-  console.log(" products after sorting", processedProducts)
+  // Handle filter changes
+  const handleSetFilters = useCallback((newFilters: ProductFilters) => {
+    setFilters(newFilters);
+    // Reset to first page when filters change
+    onPaginationChange(0);
+  }, [onPaginationChange]);
 
   return {
     products: processedProducts,
@@ -165,5 +216,7 @@ export function useProductsTable({
     goToNextPage,
     goToPreviousPage,
     isFetching: productsQuery.isFetching,
+    filters,
+    setFilters: handleSetFilters,
   };
 }
