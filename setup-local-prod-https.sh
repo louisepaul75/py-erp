@@ -59,7 +59,7 @@ sleep 5
 # Ensure Nginx is using the correct config for HTTPS
 echo "Copying SSL certificates and Nginx config to the Docker container..."
 docker cp /tmp/ssl pyerp-prod:/etc/nginx/
-docker cp /tmp/conf.d/pyerp.prod.conf pyerp-prod:/etc/nginx/conf.d/default.conf
+docker cp /tmp/conf.d/pyerp.prod.conf pyerp-prod:/etc/nginx/conf.d/pyerp.prod.conf
 
 # Restart Nginx in the container
 echo "Restarting Nginx in the container..."
