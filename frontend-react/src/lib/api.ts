@@ -4,7 +4,8 @@ import { API_URL, AUTH_CONFIG } from './config';
 import { csrfService } from './auth/authService';
 import { cookies } from 'next/headers';
 import { clientCookieStorage } from './auth/clientCookies';
-import { Customer, CustomerFormData } from './definitions'; // Assuming types are defined here
+import { Customer } from './definitions'; // Assuming Customer type is defined here
+import type { CustomerFormData } from '@/components/ui/dashboard/customers/CustomerForm'; // Corrected import path
 
 // Create an API client instance with the correct base URL and auth
 // Export the instance so it can be used in other modules
@@ -20,8 +21,12 @@ export const instance = ky.create({
           ? clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken)
           : null;
         
+        console.log('[API Instance] beforeRequest: Checking for token...');
         if (token) {
+          console.log('[API Instance] beforeRequest: Token found, setting Authorization header.');
           request.headers.set('Authorization', `Bearer ${token}`);
+        } else {
+          console.warn('[API Instance] beforeRequest: No token found.');
         }
         
         // Add CSRF token if available and if method requires it (e.g., POST, PUT, PATCH, DELETE)
@@ -253,16 +258,21 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 // Fetch all customers
 export async function fetchCustomersAPI(): Promise<Customer[]> {
-  console.log(`Fetching customers from: ${CUSTOMER_API_ENDPOINT}/`);
-  const response = await fetch(`${CUSTOMER_API_ENDPOINT}/`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      // Add Authorization header if needed: e.g., 'Authorization': `Bearer ${token}`
-    },
-    next: { revalidate: 0 } // Opt out of caching for dynamic data
-  });
-  return handleResponse<Customer[]>(response);
+  const endpoint = `v1/sales/customers/` // Use relative path for the instance
+  console.log(`Fetching customers from: ${endpoint}`);
+  try {
+    // The API returns a paginated object, so extract the results array
+    const response = await instance.get(endpoint).json<{ results: Customer[] }>();
+    return response.results || [];
+  } catch (error) {
+    console.error("Error fetching customers:", error);
+    if (error instanceof HTTPError) {
+        console.error('Status:', error.response.status);
+        console.error('Body:', await error.response.text());
+    }
+    // Handle specific errors or rethrow
+    throw error;
+  }
 }
 
 // Fetch a single customer by ID

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # run_all_sync.sh - Script to run data synchronization commands
-# Usage: ./run_all_sync.sh [--customers-only] [--products-only] [--employees-only] [--sales-only] [--images-only] [--days N] [--debug] [--force-update] [--top N]
+# Usage: ./run_all_sync.sh [--customers-only] [--products-only] [--employees-only] [--sales-only] [--images-only] [--bb-creditors-only] [--bb-receipts-inbound-only] [--bb-receipts-outbound-only] [--days N] [--debug] [--force-update] [--top N]
 
 # Set default values
 DEBUG=0
@@ -10,6 +10,9 @@ PRODUCTS_ONLY=0
 EMPLOYEES_ONLY=0
 SALES_ONLY=0
 IMAGES_ONLY=0
+BB_CREDITORS_ONLY=0
+BB_RECEIPTS_INBOUND_ONLY=0
+BB_RECEIPTS_OUTBOUND_ONLY=0
 FORCE_UPDATE=0
 TOP_VALUE=0
 DAYS_VALUE=0
@@ -41,6 +44,18 @@ while [[ "$#" -gt 0 ]]; do
         ;;
         --images-only)
         IMAGES_ONLY=1
+        shift
+        ;;
+        --bb-creditors-only)
+        BB_CREDITORS_ONLY=1
+        shift
+        ;;
+        --bb-receipts-inbound-only)
+        BB_RECEIPTS_INBOUND_ONLY=1
+        shift
+        ;;
+        --bb-receipts-outbound-only)
+        BB_RECEIPTS_OUTBOUND_ONLY=1
         shift
         ;;
         --force-update)
@@ -103,9 +118,10 @@ fi
 run_sync() {
     COMMAND=$1
     FLAGS=$2
+    # Remove leading/trailing whitespace from FLAGS just in case
+    FLAGS=$(echo "$FLAGS" | xargs)
     echo "========================================"
-    printf "Running: %s %s
-" "$COMMAND" "$FLAGS"
+    printf "Running: %s %s\n" "$COMMAND" "$FLAGS"
     echo "========================================"
     eval "$COMMAND $FLAGS"
     EXIT_CODE=$?
@@ -160,6 +176,36 @@ run_images_sync() {
     return $?
 }
 
+# Function to run Buchhaltungsbutler Creditor sync
+run_bb_creditors_sync() {
+    echo "========================================"
+    echo "Running Buchhaltungsbutler Creditors sync"
+    echo "========================================"
+    # Assuming 'bb_creditors' is the configuration name in settings/DB
+    run_sync "python manage.py run_sync --config-name bb_creditors" "$EXTRA_FLAGS"
+    return $?
+}
+
+# Function to run Buchhaltungsbutler Inbound Receipts sync
+run_bb_receipts_inbound_sync() {
+    echo "========================================"
+    echo "Running Buchhaltungsbutler Inbound Receipts sync"
+    echo "========================================"
+    # Assuming 'bb_receipts_inbound' is the configuration name
+    run_sync "python manage.py run_sync --config-name bb_receipts_inbound" "$EXTRA_FLAGS"
+    return $?
+}
+
+# Function to run Buchhaltungsbutler Outbound Receipts sync
+run_bb_receipts_outbound_sync() {
+    echo "========================================"
+    echo "Running Buchhaltungsbutler Outbound Receipts sync"
+    echo "========================================"
+    # Assuming 'bb_receipts_outbound' is the configuration name
+    run_sync "python manage.py run_sync --config-name bb_receipts_outbound" "$EXTRA_FLAGS"
+    return $?
+}
+
 # Determine which sync processes to run
 if [ $CUSTOMERS_ONLY -eq 1 ]; then
     echo "Running customers sync only"
@@ -181,6 +227,18 @@ elif [ $IMAGES_ONLY -eq 1 ]; then
     echo "Running product images sync only"
     run_images_sync
     exit $?
+elif [ $BB_CREDITORS_ONLY -eq 1 ]; then
+    echo "Running Buchhaltungsbutler Creditors sync only"
+    run_bb_creditors_sync
+    exit $?
+elif [ $BB_RECEIPTS_INBOUND_ONLY -eq 1 ]; then
+    echo "Running Buchhaltungsbutler Inbound Receipts sync only"
+    run_bb_receipts_inbound_sync
+    exit $?
+elif [ $BB_RECEIPTS_OUTBOUND_ONLY -eq 1 ]; then
+    echo "Running Buchhaltungsbutler Outbound Receipts sync only"
+    run_bb_receipts_outbound_sync
+    exit $?
 else
     echo "Running all sync processes"
     
@@ -201,8 +259,25 @@ else
 
     run_images_sync
     IMAGES_EXIT=$?
+
+    run_bb_creditors_sync
+    BB_CREDITORS_EXIT=$?
+
+    run_bb_receipts_inbound_sync
+    BB_RECEIPTS_INBOUND_EXIT=$?
+
+    run_bb_receipts_outbound_sync
+    BB_RECEIPTS_OUTBOUND_EXIT=$?
     
-    if [ $CUSTOMER_EXIT -ne 0 ] || [ $PRODUCT_EXIT -ne 0 ] || [ $INVENTORY_EXIT -ne 0 ] || [ $EMPLOYEE_EXIT -ne 0 ] || [ $SALES_EXIT -ne 0 ] || [ $IMAGES_EXIT -ne 0 ]; then
+    if [ $CUSTOMER_EXIT -ne 0 ] || \
+       [ $PRODUCT_EXIT -ne 0 ] || \
+       [ $INVENTORY_EXIT -ne 0 ] || \
+       [ $EMPLOYEE_EXIT -ne 0 ] || \
+       [ $SALES_EXIT -ne 0 ] || \
+       [ $IMAGES_EXIT -ne 0 ] || \
+       [ $BB_CREDITORS_EXIT -ne 0 ] || \
+       [ $BB_RECEIPTS_INBOUND_EXIT -ne 0 ] || \
+       [ $BB_RECEIPTS_OUTBOUND_EXIT -ne 0 ]; then
         echo "One or more sync processes failed"
         exit 1
     else

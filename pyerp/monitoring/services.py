@@ -11,6 +11,8 @@ import logging
 import subprocess
 import sys
 import time
+import requests
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 from pathlib import Path
 
@@ -39,10 +41,19 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # Maximum time to wait for each health check (in seconds)
-HEALTH_CHECK_TIMEOUT = 15  # Reduced from 120 seconds
-
+HEALTH_CHECK_TIMEOUT = 15
 # Maximum time to wait for individual component checks
-COMPONENT_CHECK_TIMEOUT = 14 # Increased from 10 seconds
+COMPONENT_CHECK_TIMEOUT = 14
+
+# Define component names (consider moving to models.py or a constants file)
+COMPONENT_DATABASE = "Database"
+COMPONENT_LEGACY_ERP = "Legacy ERP API"
+COMPONENT_IMAGES_CMS = "Images CMS API"
+COMPONENT_DATABASE_VALIDATION = "Database Validation"
+COMPONENT_ZEBRA_DAY = "Zebra Day API"
+COMPONENT_KIBANA_ELASTIC = "Kibana/Elastic Monitoring"
+COMPONENT_BUCHHALTUNGSBUTTLER = "Buchhaltungsbutler API"
+COMPONENT_FRANKFURTER_API = "Frankfurter API"
 
 
 def check_database_connection():
@@ -90,7 +101,7 @@ def check_database_connection():
 
     # Return the health check result without saving to database
     return {
-        "component": HealthCheckResult.COMPONENT_DATABASE,
+        "component": COMPONENT_DATABASE, # Use defined constant
         "status": status,
         "details": details,
         "response_time": response_time,
@@ -108,23 +119,22 @@ def check_legacy_erp_connection():
     start_time = time.time()
     status = HealthCheckResult.STATUS_ERROR
     details = "Legacy ERP API connection is not available"
+    response_time = (time.time() - start_time) * 1000 # Calculate time even if disabled/unavailable
 
     # First check if the connection is enabled
     if not connection_manager.is_connection_enabled("legacy_erp"):
         status = HealthCheckResult.STATUS_WARNING
         details = "Legacy ERP API connection is disabled"
         logger.info("Legacy ERP health check: Connection is disabled")
-        response_time = 0
     elif not LEGACY_ERP_AVAILABLE:
         status = HealthCheckResult.STATUS_WARNING
         details = "Legacy ERP API module is not available"
         logger.warning("Legacy ERP health check: Module not available")
-        response_time = 0
     else:
         try:
             # Create client and check connection
             client = LegacyERPClient()
-            client.check_connection()
+            client.check_connection() # Assuming this raises an exception on failure
             status = HealthCheckResult.STATUS_SUCCESS
             details = "Legacy ERP API connection is healthy"
             response_time = (time.time() - start_time) * 1000
@@ -136,7 +146,7 @@ def check_legacy_erp_connection():
 
     # Return the health check result without saving to database
     return {
-        "component": HealthCheckResult.COMPONENT_LEGACY_ERP,
+        "component": COMPONENT_LEGACY_ERP, # Use defined constant
         "status": status,
         "details": details,
         "response_time": response_time,
@@ -154,17 +164,16 @@ def check_images_cms_connection():
     start_time = time.time()
     status = HealthCheckResult.STATUS_SUCCESS
     details = "Images CMS API connection is healthy"
+    response_time = (time.time() - start_time) * 1000 # Calculate time even if disabled/unavailable
 
     # First check if the connection is enabled
     if not connection_manager.is_connection_enabled("images_cms"):
         status = HealthCheckResult.STATUS_WARNING
         details = "Images CMS API connection is disabled"
         logger.info("Images CMS health check: Connection is disabled")
-        response_time = 0
     elif not IMAGES_CMS_AVAILABLE:
         status = HealthCheckResult.STATUS_WARNING
         details = "Images CMS API module is not available"
-        response_time = 0
         logger.warning("Images CMS health check: Module not available")
     else:
         try:
@@ -174,7 +183,7 @@ def check_images_cms_connection():
 
             # Create client and check connection
             client = ImageAPIClient()
-            client.check_connection()
+            client.check_connection() # Assuming this raises an exception on failure
             status = HealthCheckResult.STATUS_SUCCESS
             details = "Images CMS API connection is healthy"
             response_time = (time.time() - start_time) * 1000
@@ -187,7 +196,7 @@ def check_images_cms_connection():
 
     # Return the health check result without saving to database
     return {
-        "component": HealthCheckResult.COMPONENT_IMAGES_CMS,
+        "component": COMPONENT_IMAGES_CMS, # Use defined constant
         "status": status,
         "details": details,
         "response_time": response_time,
@@ -271,14 +280,14 @@ def validate_database():
 
     # Create and return the health check result
     result = HealthCheckResult.objects.create(
-        component=HealthCheckResult.COMPONENT_DATABASE_VALIDATION,
+        component=COMPONENT_DATABASE_VALIDATION, # Use defined constant
         status=status,
         details=details,
         response_time=response_time,
     )
 
     return {
-        "component": HealthCheckResult.COMPONENT_DATABASE_VALIDATION,
+        "component": COMPONENT_DATABASE_VALIDATION, # Use defined constant
         "status": status,
         "details": details,
         "response_time": response_time,
@@ -441,113 +450,98 @@ def get_database_statistics():
 
 def run_all_health_checks(as_array=True):
     """
-    Run all health checks concurrently using ThreadPoolExecutor.
+    Run all health checks concurrently and return the results.
 
     Args:
-        as_array (bool): If True, returns results as an array; otherwise as dict
+        as_array (bool): If True, returns results as a list of dictionaries.
+                         If False, returns results as a dictionary keyed by component name.
 
     Returns:
-        list or dict: Health check results in the specified format
+        list or dict: List or dictionary containing the results of each health check
     """
-    logger.info("Starting health checks concurrently")
     start_time = time.time()
+    logger.info("Starting all health checks...")
 
-    health_checks = {
-        HealthCheckResult.COMPONENT_DATABASE: check_database_connection,
-        HealthCheckResult.COMPONENT_LEGACY_ERP: check_legacy_erp_connection,
-        HealthCheckResult.COMPONENT_IMAGES_CMS: check_images_cms_connection,
-    }
+    # List of functions to call for health checks
+    health_check_functions = [
+        check_database_connection,
+        check_legacy_erp_connection,
+        check_images_cms_connection,
+        validate_database, # Assuming this runs fast enough or handled internally
+        check_zebra_day,
+        check_kibana_elastic,
+        check_buchhaltungsbutler,
+        check_frankfurter_api,
+    ]
 
-    results = {}
-    futures = {}
+    results_list = []
+    timed_out_checks = []
 
-    executor = ThreadPoolExecutor(max_workers=len(health_checks))
-    try:
-        for component, check_func in health_checks.items():
-            logger.debug(f"Submitting health check for: {component}")
-            futures[executor.submit(check_func)] = component
+    with ThreadPoolExecutor(max_workers=len(health_check_functions)) as executor:
+        # Submit all health check functions to the executor
+        future_to_func = {
+            executor.submit(func): func for func in health_check_functions
+        }
 
-        # Process completed futures with overall timeout
-        completed_count = 0
-        try:
-            for future in as_completed(futures, timeout=HEALTH_CHECK_TIMEOUT):
-                component = futures[future]
-                completed_count += 1
-                try:
-                    # Get result with individual component timeout
-                    result = future.result(timeout=COMPONENT_CHECK_TIMEOUT)
-                    results[component] = result
-                    logger.debug(f"Health check completed for {component}: {result['status']}")
-                except TimeoutError:
-                    error_msg = f"Health check timed out for {component} after {COMPONENT_CHECK_TIMEOUT} seconds"
-                    logger.warning(error_msg)
-                    results[component] = {
-                        "component": component,
-                        "status": HealthCheckResult.STATUS_ERROR,
-                        "details": error_msg,
-                        "response_time": COMPONENT_CHECK_TIMEOUT * 1000,
-                        "timestamp": timezone.now(),
-                    }
-                except Exception as e:
-                    error_msg = f"Health check failed for {component}: {e!s}"
-                    logger.exception(error_msg)
-                    results[component] = {
-                        "component": component,
-                        "status": HealthCheckResult.STATUS_ERROR,
-                        "details": error_msg,
-                        "response_time": 0,  # Or calculate time until exception?
-                        "timestamp": timezone.now(),
-                    }
-        except TimeoutError:
-            unfinished_count = len(futures) - completed_count
-            logger.warning(
-                f"Overall health check timed out after {HEALTH_CHECK_TIMEOUT} seconds. "\
-                f"{unfinished_count} (of {len(futures)}) futures unfinished."
-            )
-            # Don't wait for hanging futures - this is crucial to avoid Gunicorn timeout
-            # Note: cancel_futures=True is Py 3.9+
-            executor.shutdown(wait=False, cancel_futures=True)
+        # Process results as they complete
+        for future in as_completed(future_to_func, timeout=HEALTH_CHECK_TIMEOUT):
+            func = future_to_func[future]
+            component_name = func.__name__.replace("check_", "").replace("_", " ").title() # Derive name for logging
 
-        # Check for any components that didn't get a result recorded
-        # This handles futures that timed out in the as_completed loop
-        # or any other unexpected missing results.
-        for component in health_checks.keys():
-            if component not in results:
-                error_msg = f"Health check result missing for {component} (likely timed out or cancelled)"
-                logger.error(error_msg)
-                results[component] = {
-                    "component": component,
+            try:
+                # Get the result, applying the component check timeout
+                result = future.result(timeout=COMPONENT_CHECK_TIMEOUT)
+                results_list.append(result)
+                logger.debug(f"Health check completed: {result['component']}")
+            except TimeoutError:
+                # Individual check timed out
+                logger.error(
+                    f"Health check timed out for component: {component_name} "
+                    f"(> {COMPONENT_CHECK_TIMEOUT}s)"
+                )
+                timed_out_checks.append(component_name)
+                results_list.append({
+                    "component": component_name, # Best guess for component name
                     "status": HealthCheckResult.STATUS_ERROR,
-                    "details": error_msg,
-                    "response_time": HEALTH_CHECK_TIMEOUT * 1000,
+                    "details": f"Check timed out after {COMPONENT_CHECK_TIMEOUT} seconds.",
+                    "response_time": COMPONENT_CHECK_TIMEOUT * 1000,
                     "timestamp": timezone.now(),
-                }
+                })
+            except Exception as exc:
+                # An unexpected error occurred during the check execution
+                logger.exception(
+                    f"Health check failed with exception for component: {component_name}: {exc!s}"
+                )
+                results_list.append({
+                    "component": component_name, # Best guess for component name
+                    "status": HealthCheckResult.STATUS_ERROR,
+                    "details": f"Check failed with exception: {exc!s}",
+                    "response_time": (time.time() - start_time) * 1000, # Time until failure
+                    "timestamp": timezone.now(),
+                })
 
-    finally:
-        # Ensure shutdown happens even if no timeout occurred in as_completed
-        # but do it without waiting to prevent hangs if a future completed
-        # but somehow got stuck during shutdown.
-        if not executor._shutdown:
-            executor.shutdown(wait=False, cancel_futures=True)
+    # Handle checks that might not have completed if the overall timeout was hit
+    # (though as_completed with timeout should handle this)
+    if len(results_list) < len(health_check_functions):
+        logger.warning(
+            f"Overall health check timeout ({HEALTH_CHECK_TIMEOUT}s) may have been reached. "
+            f"Completed {len(results_list)} out of {len(health_check_functions)} checks."
+        )
+        # Potentially identify which ones are missing if needed
 
-    total_time = time.time() - start_time
-    logger.info(f"All health checks processed concurrently in {total_time:.2f} seconds")
+    total_duration = (time.time() - start_time) * 1000
+    logger.info(
+        f"All health checks finished in {total_duration:.2f} ms. "
+        f"Timed out checks: {timed_out_checks if timed_out_checks else 'None'}"
+    )
 
-    # Return in the requested format
+    # Format results based on the 'as_array' parameter
     if as_array:
-        # Ensure order matches the original definition for consistency
-        ordered_results = []
-        for component in health_checks.keys():
-            # results dict is guaranteed to have all components now
-            result_data = results[component]
-            # Ensure 'component' key exists, even if the check failed early
-            if 'component' not in result_data:
-                result_data['component'] = component
-            ordered_results.append(result_data)
-        return ordered_results
-
-    # Return as dictionary (already guaranteed to have all components)
-    return results
+        return results_list
+    else:
+        # Convert list of dicts to dict keyed by component name
+        results_dict = {result["component"]: result for result in results_list}
+        return results_dict
 
 
 def get_host_resources():
@@ -628,3 +622,384 @@ def get_host_resources():
     except Exception as e:
         logger.error(f"Error collecting host resources: {str(e)}")
         return {"error": str(e), "timestamp": datetime.now().isoformat()}
+
+
+def check_zebra_day():
+    """
+    Check if the connection to the Zebra Day API is working properly.
+    
+    Zebra Day can run either:
+    1. Locally (when started with --with-zebra) at http://localhost:8118
+    2. Remotely (default) at IP 192.168.73.65:8118
+
+    Returns:
+        dict: Health check result with status, details, and response time
+    """
+    start_time = time.time()
+    status = HealthCheckResult.STATUS_UNKNOWN
+    details = "Zebra Day API check not fully implemented."
+    component_name = COMPONENT_ZEBRA_DAY
+
+    if not connection_manager.is_connection_enabled("zebra_day"):
+        status = HealthCheckResult.STATUS_WARNING
+        details = f"{component_name} connection is disabled."
+    else:
+        try:
+            # Get the API URL from settings with fallbacks for both deployment modes
+            api_url = getattr(settings, "ZEBRA_DAY_API_URL", None)
+            api_key = getattr(settings, "ZEBRA_DAY_API_KEY", None)
+            
+            # If URL not explicitly configured, determine based on environment
+            if not api_url:
+                # Check if we're running in Docker
+                in_docker = os.environ.get("RUNNING_IN_DOCKER", "false").lower() == "true"
+                local_zebra = os.environ.get("ZEBRA_DAY_LOCAL", "false").lower() == "true"
+                
+                if in_docker and local_zebra:
+                    # When running in Docker with local Zebra, use the service name as hostname
+                    api_url = "http://zebra-day:8118"
+                    logger.info(f"Using Docker service name for Zebra Day: {api_url}")
+                elif local_zebra:
+                    # Local Zebra running on host
+                    api_url = "http://localhost:8118"
+                    logger.info(f"Using localhost for Zebra Day: {api_url}")
+                else:
+                    # Remote Zebra Day (default configuration)
+                    api_url = "http://192.168.73.65:8118"
+                    logger.info(f"Using remote IP for Zebra Day: {api_url}")
+
+            # Prepare headers
+            headers = {}
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
+            headers["Accept"] = "application/json"
+            
+            # Use health or status endpoint if available
+            # Note: Adjust endpoint based on actual Zebra Day API structure
+            health_endpoint = f"{api_url.rstrip('/')}/api/health"
+            
+            # Make the request with a timeout
+            response = requests.get(health_endpoint, headers=headers, timeout=5)
+            
+            if response.status_code == 200:
+                status = HealthCheckResult.STATUS_SUCCESS
+                details = f"{component_name} API is healthy at {api_url}. Response: {response.text[:100]}"
+            else:
+                status = HealthCheckResult.STATUS_ERROR
+                details = f"{component_name} API at {api_url} returned status code {response.status_code}: {response.text[:100]}"
+                logger.error(f"{component_name} API error: {response.status_code} - {response.text[:200]}")
+        except requests.RequestException as e:
+            status = HealthCheckResult.STATUS_ERROR
+            details = f"{component_name} API connection error: {str(e)}"
+            logger.error(f"{component_name} API connection error: {str(e)}")
+        except Exception as e:
+            status = HealthCheckResult.STATUS_ERROR
+            details = f"{component_name} API unexpected error: {str(e)}"
+            logger.exception(f"{component_name} API check failed with exception")
+
+    response_time = (time.time() - start_time) * 1000
+    return {
+        "component": component_name,
+        "status": status,
+        "details": details,
+        "response_time": response_time,
+        "timestamp": timezone.now(),
+    }
+
+
+def check_kibana_elastic():
+    """
+    Check if the connection to Kibana/Elastic monitoring is working properly.
+    
+    Configuration options:
+    - ELASTICSEARCH_URL: Base URL for Elasticsearch (default: http://localhost:9200)
+    - ELASTICSEARCH_USERNAME: Optional auth username
+    - ELASTICSEARCH_PASSWORD: Optional auth password
+    
+    When running in Docker with --with-monitoring flag, the service is accessible 
+    via the container name 'pyerp-elastic-kibana' on port 9200.
+
+    Returns:
+        dict: Health check result with status, details, and response time
+    """
+    start_time = time.time()
+    status = HealthCheckResult.STATUS_UNKNOWN
+    details = "Kibana/Elastic check not fully implemented."
+    component_name = COMPONENT_KIBANA_ELASTIC
+
+    if not connection_manager.is_connection_enabled("kibana_elastic"):
+        status = HealthCheckResult.STATUS_WARNING
+        details = f"{component_name} connection is disabled."
+    else:
+        try:
+            # Get the Elasticsearch URL with fallbacks for different environments
+            es_url = getattr(settings, "ELASTICSEARCH_URL", None)
+            es_username = getattr(settings, "ELASTICSEARCH_USERNAME", None)
+            es_password = getattr(settings, "ELASTICSEARCH_PASSWORD", None)
+            
+            # If URL not explicitly configured, determine based on environment
+            if not es_url:
+                # Check if we're running in Docker
+                in_docker = os.environ.get("RUNNING_IN_DOCKER", "false").lower() == "true"
+                with_monitoring = os.environ.get("WITH_MONITORING", "false").lower() == "true"
+                
+                if in_docker and with_monitoring:
+                    # When running in Docker with monitoring, use the service name
+                    es_url = "http://pyerp-elastic-kibana:9200"
+                    logger.info(f"Using Docker service name for Elasticsearch: {es_url}")
+                else:
+                    # Default to localhost
+                    es_url = "http://localhost:9200"
+                    logger.info(f"Using localhost for Elasticsearch: {es_url}")
+            
+            # Construct auth tuple if credentials are provided
+            auth = None
+            if es_username and es_password:
+                auth = (es_username, es_password)
+            
+            # Use Elasticsearch's cluster health endpoint
+            health_endpoint = f"{es_url.rstrip('/')}/_cluster/health"
+            logger.debug(f"Checking Elasticsearch health at: {health_endpoint}")
+            
+            # Make the request with a timeout
+            response = requests.get(health_endpoint, auth=auth, timeout=5)
+            
+            if response.status_code == 200:
+                # Parse the response
+                health_data = response.json()
+                cluster_status = health_data.get("status", "unknown")
+                
+                # Map Elasticsearch status to our health check status
+                if cluster_status == "green":
+                    status = HealthCheckResult.STATUS_SUCCESS
+                    details = "Elasticsearch cluster health is green. All shards allocated."
+                elif cluster_status == "yellow":
+                    status = HealthCheckResult.STATUS_WARNING
+                    details = "Elasticsearch cluster health is yellow. Some replica shards not allocated."
+                else:  # red or unknown
+                    status = HealthCheckResult.STATUS_ERROR
+                    details = (
+                        f"Elasticsearch cluster health is {cluster_status}. "
+                        "Some primary shards not allocated."
+                    )
+                
+                # Add more details
+                node_count = health_data.get("number_of_nodes", 0)
+                details += f" Nodes: {node_count}."
+            else:
+                status = HealthCheckResult.STATUS_ERROR
+                details = (
+                    f"Elasticsearch at {es_url} returned status code {response.status_code}: "
+                    f"{response.text[:100]}"
+                )
+                logger.error(
+                    f"Elasticsearch API error: {response.status_code} - "
+                    f"{response.text[:200]}"
+                )
+        except requests.RequestException as e:
+            status = HealthCheckResult.STATUS_ERROR
+            details = f"Elasticsearch connection error: {str(e)}"
+            logger.error(f"Elasticsearch connection error: {str(e)}")
+        except Exception as e:
+            status = HealthCheckResult.STATUS_ERROR
+            details = f"Elasticsearch unexpected error: {str(e)}"
+            logger.exception("Elasticsearch check failed with exception")
+
+    response_time = (time.time() - start_time) * 1000
+    return {
+        "component": component_name,
+        "status": status,
+        "details": details,
+        "response_time": response_time,
+        "timestamp": timezone.now(),
+    }
+
+
+def check_buchhaltungsbutler():
+    """
+    Check if the connection to the Buchhaltungsbutler API is working properly.
+    
+    Configuration options:
+    - BUCHHALTUNGSBUTLER_API_URL: Base URL for the API
+    - BUCHHALTUNGSBUTLER_API_KEY: Authentication key
+    
+    The connection manager uses 'buchhaltungs_buttler' as the key.
+
+    Returns:
+        dict: Health check result with status, details, and response time
+    """
+    start_time = time.time()
+    status = HealthCheckResult.STATUS_UNKNOWN
+    details = "Buchhaltungsbutler API check not fully implemented."
+    component_name = COMPONENT_BUCHHALTUNGSBUTTLER
+
+    if not connection_manager.is_connection_enabled("buchhaltungs_buttler"):
+        status = HealthCheckResult.STATUS_WARNING
+        details = f"{component_name} connection is disabled."
+    else:
+        try:
+            # Get the API settings from Django settings
+            api_url = getattr(settings, "BUCHHALTUNGSBUTLER_API_URL", None)
+            api_key = getattr(settings, "BUCHHALTUNGSBUTLER_API_KEY", None)
+            
+            if not api_url:
+                status = HealthCheckResult.STATUS_ERROR
+                details = f"{component_name} API URL not configured in settings."
+                logger.error(f"{component_name} API URL missing from settings")
+            elif not api_key:
+                status = HealthCheckResult.STATUS_ERROR
+                details = f"{component_name} API key not configured in settings."
+                logger.error(f"{component_name} API key missing from settings")
+            else:
+                # Prepare headers with authentication
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                }
+                
+                # Call a lightweight endpoint (adjust based on actual API structure)
+                endpoint = f"{api_url.rstrip('/')}/api/v1/status"
+                logger.debug(f"Checking {component_name} health at: {endpoint}")
+                
+                # Make the request with a timeout
+                response = requests.get(endpoint, headers=headers, timeout=5)
+                
+                if response.status_code in (200, 201, 204):
+                    status = HealthCheckResult.STATUS_SUCCESS
+                    details = (
+                        f"{component_name} API is healthy. "
+                        f"Response status: {response.status_code}."
+                    )
+                    
+                    # Add more details if available
+                    try:
+                        if (response.text and 
+                            response.headers.get("content-type", "").startswith("application/json")):
+                            response_data = response.json()
+                            if isinstance(response_data, dict):
+                                api_status = response_data.get("status", "unknown")
+                                api_version = response_data.get("version", "unknown")
+                                details += f" API status: {api_status}, version: {api_version}."
+                    except ValueError:
+                        pass  # Not JSON or parsing failed
+                else:
+                    status = HealthCheckResult.STATUS_ERROR
+                    details = (
+                        f"{component_name} API returned status code {response.status_code}: "
+                        f"{response.text[:100]}"
+                    )
+                    logger.error(
+                        f"{component_name} API error: {response.status_code} - "
+                        f"{response.text[:200]}"
+                    )
+        except requests.RequestException as e:
+            status = HealthCheckResult.STATUS_ERROR
+            details = f"{component_name} API connection error: {str(e)}"
+            logger.error(f"{component_name} API connection error: {str(e)}")
+        except Exception as e:
+            status = HealthCheckResult.STATUS_ERROR
+            details = f"{component_name} API unexpected error: {str(e)}"
+            logger.exception(f"{component_name} API check failed with exception")
+
+    response_time = (time.time() - start_time) * 1000
+    return {
+        "component": component_name,
+        "status": status,
+        "details": details,
+        "response_time": response_time,
+        "timestamp": timezone.now(),
+    }
+
+
+def check_frankfurter_api():
+    """
+    Check if the connection to the Frankfurter API is working properly.
+    This is a free currency exchange rates API.
+    
+    Default API URL: https://api.frankfurter.app
+    Can be overridden with FRANKFURTER_API_URL setting.
+
+    Returns:
+        dict: Health check result with status, details, and response time
+    """
+    start_time = time.time()
+    status = HealthCheckResult.STATUS_UNKNOWN
+    details = "Frankfurter API check not fully implemented."
+    component_name = COMPONENT_FRANKFURTER_API
+
+    if not connection_manager.is_connection_enabled("frankfurter_api"):
+        status = HealthCheckResult.STATUS_WARNING
+        details = f"{component_name} connection is disabled."
+    else:
+        try:
+            # The Frankfurter API base URL
+            api_url = getattr(
+                settings, 
+                "FRANKFURTER_API_URL", 
+                "https://api.frankfurter.app"
+            )
+            logger.debug(f"Using Frankfurter API URL: {api_url}")
+            
+            # Use the /latest endpoint which returns current exchange rates
+            endpoint = f"{api_url.rstrip('/')}/latest?from=EUR"
+            
+            # Make the request with a timeout
+            logger.debug(f"Checking Frankfurter API health at: {endpoint}")
+            response = requests.get(endpoint, timeout=5)
+            
+            if response.status_code == 200:
+                try:
+                    # Parse the response to extract useful info
+                    data = response.json()
+                    base_currency = data.get("base", "unknown")
+                    date = data.get("date", "unknown")
+                    
+                    # Check if the response contains rates
+                    rates = data.get("rates", {})
+                    if rates and isinstance(rates, dict) and len(rates) > 0:
+                        status = HealthCheckResult.STATUS_SUCCESS
+                        rate_count = len(rates)
+                        currencies = list(rates.keys())[:5]  # Limit to first 5 currencies
+                        details = (
+                            f"{component_name} is healthy. "
+                            f"Base: {base_currency}, Date: {date}. "
+                            f"Returned rates for {rate_count} currencies "
+                            f"including {', '.join(currencies)}..."
+                        )
+                    else:
+                        status = HealthCheckResult.STATUS_WARNING
+                        details = (
+                            f"{component_name} returned a valid response but with "
+                            f"no rates data. Base: {base_currency}, Date: {date}."
+                        )
+                except ValueError:
+                    status = HealthCheckResult.STATUS_ERROR
+                    details = f"{component_name} returned invalid JSON: {response.text[:100]}"
+            else:
+                status = HealthCheckResult.STATUS_ERROR
+                details = (
+                    f"{component_name} returned status code {response.status_code}: "
+                    f"{response.text[:100]}"
+                )
+                logger.error(
+                    f"{component_name} API error: {response.status_code} - "
+                    f"{response.text[:200]}"
+                )
+        except requests.RequestException as e:
+            status = HealthCheckResult.STATUS_ERROR
+            details = f"{component_name} connection error: {str(e)}"
+            logger.error(f"{component_name} connection error: {str(e)}")
+        except Exception as e:
+            status = HealthCheckResult.STATUS_ERROR
+            details = f"{component_name} unexpected error: {str(e)}"
+            logger.exception(f"{component_name} check failed with exception")
+
+    response_time = (time.time() - start_time) * 1000
+    return {
+        "component": component_name,
+        "status": status,
+        "details": details,
+        "response_time": response_time,
+        "timestamp": timezone.now(),
+    }

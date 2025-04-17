@@ -34,6 +34,10 @@ urlpatterns = [
             'products/',
             include('pyerp.business_modules.products.api_urls'),
         ),  # Include the products API URLs
+         path(
+            'currency/',
+            include('pyerp.business_modules.currency.urls'),
+        ),  # Include the products API URLs
         path(
             'sales/',
             include('pyerp.business_modules.sales.api_urls'),

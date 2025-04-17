@@ -103,21 +103,37 @@ class Command(BaseCommand):
             raise CommandError(f"Error loading configuration: {e}")
 
     def _create_mapping(self, entity_type, config, force=False):
-        """Create a sync mapping from configuration."""
+        """Create or update a sync mapping from configuration."""
         try:
-            # Check if mapping already exists
-            try:
-                existing_mapping = SyncMapping.objects.get(entity_type=entity_type)
+            # Check for existing mappings
+            existing_mappings = SyncMapping.objects.filter(entity_type=entity_type)
+            existing_count = existing_mappings.count()
+
+            if existing_count > 0:
                 if not force:
-                    self.stdout.write(
-                        f"Mapping for {entity_type} already exists (ID: {existing_mapping.id})"
-                    )
-                    return existing_mapping
+                    if existing_count == 1:
+                        # Return the single existing mapping if not forcing recreation
+                        self.stdout.write(
+                            f"Mapping for {entity_type} already exists (ID: {existing_mappings.first().id}). Use --force to recreate."
+                        )
+                        return existing_mappings.first()
+                    else:
+                        # Multiple mappings exist, and we are not forcing. This is ambiguous.
+                        self.stdout.write(
+                            self.style.WARNING(
+                                f"Multiple ({existing_count}) mappings found for {entity_type}. "
+                                f"Cannot return a single mapping. Use --force to delete and recreate."
+                            )
+                        )
+                        # Raise an error or return None depending on desired behavior.
+                        # Raising error to prevent unexpected behavior.
+                        raise CommandError(f"Ambiguous state: {existing_count} mappings found for {entity_type} without --force.")
                 else:
-                    self.stdout.write(f"Recreating mapping for {entity_type}")
-                    existing_mapping.delete()
-            except SyncMapping.DoesNotExist:
-                pass
+                    # Force is True, delete all existing mappings for this entity type
+                    self.stdout.write(f"--force specified. Deleting {existing_count} existing mapping(s) for {entity_type}...")
+                    deleted_count, _ = existing_mappings.delete()
+                    self.stdout.write(f"Deleted {deleted_count} mapping(s).")
+            # else: existing_count == 0 - proceed to create
 
             # Get source configuration
             source_config = config.get("source", {})
@@ -136,9 +152,10 @@ class Command(BaseCommand):
             if not loader_config:
                 raise CommandError(f"Loader configuration not found for {entity_type}")
 
-            # Create or get source
+            # Create or update source (using update_or_create for idempotency)
+            source_name = f"legacy_erp_{entity_type}" # Use unique name
             source_defaults = {
-                "description": f"Source for {entity_type}",
+                "description": f"Legacy ERP source for {entity_type}", # Updated description
                 "config": {
                     "environment": source_config.get("config", {}).get(
                         "environment", "live"
@@ -147,16 +164,26 @@ class Command(BaseCommand):
                     "page_size": source_config.get("config", {}).get("page_size", 100),
                     "extractor_class": source_config.get("extractor_class"),
                 },
-                "active": True,
+                "active": True, # Ensure source is active
             }
-            source, _ = SyncSource.objects.get_or_create(
-                name="legacy_erp", defaults=source_defaults
+            source, created = SyncSource.objects.update_or_create(
+                name=source_name, # Use unique name here
+                defaults=source_defaults
             )
-            if not _:
-                source.config.update(source_defaults["config"])
-                source.save()
+            # If the source was not created (i.e., it existed), ensure its config is updated
+            if not created:
+                # Compare and update only if necessary, or just update directly
+                # Direct update is simpler here
+                source.config = source_defaults["config"]
+                source.description = source_defaults["description"] # Also update description
+                source.active = source_defaults["active"]
+                source.save(update_fields=["config", "description", "active"])
+                action = "Updated"
+            else:
+                action = "Created"
+            self.stdout.write(f"{action} source '{source.name}'.")
 
-            # Create or get target
+            # Create or update target (using update_or_create for idempotency)
             target_defaults = {
                 "description": f"Target for {entity_type}",
                 "config": {
@@ -172,16 +199,25 @@ class Command(BaseCommand):
                     ),
                     "loader_class": loader_config.get("class"),
                 },
-                "active": True,
+                "active": True, # Ensure target is active
             }
-            target, _ = SyncTarget.objects.get_or_create(
-                name="pyerp", defaults=target_defaults
+            target, created = SyncTarget.objects.update_or_create(
+                name="pyerp", # Assuming name identifies the target uniquely
+                defaults=target_defaults
             )
-            if not _:
-                target.config.update(target_defaults["config"])
-                target.save()
+            # If the target was not created, ensure its config is updated
+            if not created:
+                target.config = target_defaults["config"]
+                target.description = target_defaults["description"]
+                target.active = target_defaults["active"]
+                target.save(update_fields=["config", "description", "active"])
+                action = "Updated"
+            else:
+                action = "Created"
+            self.stdout.write(f"{action} target '{target.name}'.")
 
-            # Create mapping
+            # Create the new mapping
+            self.stdout.write(f"Creating new mapping for {entity_type}...")
             mapping_config = {
                 "transformer_class": transformer_config.get("class"),
                 "transform_method": transformer_config.get("config", {}).get(
@@ -196,6 +232,9 @@ class Command(BaseCommand):
                 "composite_key": transformer_config.get("config", {}).get(
                     "composite_key"
                 ),
+                # Include loader_config directly in mapping_config as well?
+                # Some pipeline logic might expect it there.
+                "loader_config": loader_config.get("config", {}),
             }
 
             mapping = SyncMapping.objects.create(
@@ -203,10 +242,11 @@ class Command(BaseCommand):
                 source=source,
                 target=target,
                 mapping_config=mapping_config,
-                active=True,
+                active=True, # Ensure the new mapping is active
             )
-
+            self.stdout.write(f"Successfully created new mapping ID: {mapping.id}")
             return mapping
 
         except Exception as e:
+            logger.error(f"Error creating mapping for {entity_type}: {e}", exc_info=True)
             raise CommandError(f"Error creating mapping for {entity_type}: {str(e)}")

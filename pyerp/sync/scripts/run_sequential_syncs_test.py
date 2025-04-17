@@ -64,12 +64,22 @@ if __name__ == "__main__":
 
     # --- Run Legacy ERP Filter Tests ---
     print("Running Legacy ERP Filter Tests...")
-    filter_test_script_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__),
-        '..', '..', 'external_api', 'tests', 'test_legacy_erp_filters.py'
-    ))
+    # Removed filter_test_script_path as it's no longer needed for manage.py
+    # filter_test_script_path = os.path.abspath(os.path.join(
+    #     os.path.dirname(__file__),
+    #     '..', '..', 'external_api', 'tests', 'test_legacy_erp_filters.py'
+    # ))
+
+    # Correctly locate manage.py at the project root
+    project_root = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), '..', '..', '..')
+    )
+    manage_py_path = os.path.join(project_root, 'manage.py')
+
+    # Use manage.py test command
     filter_test_command = [
-        sys.executable, '-m', 'unittest', filter_test_script_path
+        sys.executable, manage_py_path, 'test', 
+        'pyerp.external_api.tests.test_legacy_erp_filters'
     ]
     filter_test_success = False
     try:
@@ -87,7 +97,7 @@ if __name__ == "__main__":
         # Optional: print test output summary if needed from result.stdout
         filter_test_success = True
     except FileNotFoundError:
-        print(f"  FAILED: Test script not found at {filter_test_script_path}")
+        print(f"  FAILED: Test script not found at {filter_test_command}")
     except subprocess.CalledProcessError as e:
         print(f"  FAILED: Legacy ERP Filter Tests (Exit Code: {e.returncode})")
         print("  --- Test Output (stdout) ---")

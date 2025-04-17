@@ -43,7 +43,7 @@ class Command(BaseCommand):
             "--batch-size",
             type=int,
             default=100,
-            help="Batch size for processing records",
+            help="Batch size for processing records", 
         )
         parser.add_argument("--filters", help="Additional filters in JSON format")
         parser.add_argument("--debug", action="store_true", help="Enable debug logging")

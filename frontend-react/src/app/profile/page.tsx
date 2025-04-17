@@ -17,7 +17,7 @@ export default function ProfilePage() {
   const currentUser = users?.find((user) => user.id === CURRENT_USER_ID)
 
   return (
-    <div className="container py-6 md:py-10">
+    <div className="container py-6 md:py-10 h-full overflow-auto">
       <h1 className="text-3xl font-bold mb-6">Mein Profil</h1>
 
       {isLoading ? (

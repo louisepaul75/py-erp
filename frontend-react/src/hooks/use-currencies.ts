@@ -1,71 +1,117 @@
 "use client"
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import type { Currency, CurrencyInput, CurrencyUpdateInput } from "@/types/settings/currency"
+import type { Currency, CurrencyList, CurrencyInput, CurrencyUpdateInput } from "@/types/settings/currency"
 import { useState } from "react"
+import { API_URL } from "@/lib/config";
+import { authService } from "@/lib/auth/authService";
 
 // Mock API functions - replace with actual API calls
 const fetchCurrencies = async (): Promise<Currency[]> => {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 500))
+  const token = await authService.getToken();
+  const endpoint = `/currency/calculated-rates-list/`; 
+  const response = await fetch(API_URL + endpoint, {
+    method: "GET", // Use GET to retrieve the list
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+  });
 
-  // Return mock data
-  return [
-    {
-      id: "1",
-      code: "EUR",
-      name: "Euro",
-      realTimeRate: 1.0,
-      calculationRate: 1.0,
-      lastUpdated: new Date().toISOString(),
-    },
-    {
-      id: "2",
-      code: "USD",
-      name: "US Dollar",
-      realTimeRate: 0.9234,
-      calculationRate: 0.92,
-      lastUpdated: new Date().toISOString(),
-    },
-    {
-      id: "3",
-      code: "GBP",
-      name: "British Pound",
-      realTimeRate: 1.1756,
-      calculationRate: 1.18,
-      lastUpdated: new Date().toISOString(),
-    },
-    {
-      id: "4",
-      code: "JPY",
-      name: "Japanese Yen",
-      realTimeRate: 0.0061,
-      calculationRate: 0.006,
-      lastUpdated: new Date().toISOString(),
-    },
-  ]
+  if (!response.ok) {
+    console.error("API Error:", response.status, await response.text());
+    throw new Error(`Failed to fetch currencies: ${response.status} ${response.statusText}`);
+  }
+  const data = await response.json()
+
+  const compactRates = data.results.map((item, index) => {
+    const [code, name] = item.target_currency.split(" - ");
+    console.log("RESPONSE", item)
+  
+    return {
+      id: (index + 1).toString(), 
+      code,
+      name,
+      realTimeRate: parseFloat(item.rate),
+      calculationRate: parseFloat(item.calculation_rate_stored),
+      lastUpdated: item.date,
+    };
+  });
+  
+  return compactRates
 }
 
-const addCurrency = async (currency: CurrencyInput): Promise<Currency> => {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 1000))
+const fetchCurrenciesList = async (): Promise<any> => {
+  const token = await authService.getToken();
+  const endpoint = `/currency/currencies-with-rates/`; 
+  const response = await fetch(API_URL + endpoint, {
+    method: "GET", // Use GET to retrieve the list
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+  });
 
-  return {
-    id: Math.random().toString(36).substring(2, 9),
-    ...currency,
-    lastUpdated: new Date().toISOString(),
+  if (!response.ok) {
+    console.error("API Error:", response.status, await response.text());
+    throw new Error(`Failed to fetch currencies: ${response.status} ${response.statusText}`);
   }
+  const data = await response.json()
+  return data.results as CurrencyList
+};
+
+const addCurrency = async (currency: CurrencyInput): Promise<any> => {
+  const token = await authService.getToken();
+  const endpoint = `/currency/calculated-rates/`;
+
+  const response = await fetch(API_URL + endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+    body: JSON.stringify(currency),
+  });
+
+  if (!response.ok) {
+    console.error("API Error:", response.status, await response.text());
+    throw new Error(`Failed to submit rate: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json() ;
+
 }
 
 const updateCurrency = async (currency: CurrencyUpdateInput): Promise<Currency> => {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 1000))
+  console.log("updateCurrency", currency)
+  const token = await authService.getToken();
+  const endpoint = `/currency/calculated-rates/update/`;
+
+  const response = await fetch(API_URL + endpoint, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+    body: JSON.stringify(currency),
+  });
+
+  if (!response.ok) {
+    console.error("API Error:", response.status, await response.text());
+    throw new Error(`Failed to update rate: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
 
   return {
-    ...currency,
+    ...data,
     lastUpdated: new Date().toISOString(),
-  }
-}
+  };
+};
 
 const deleteCurrency = async (id: string): Promise<void> => {
   // Simulate API call
@@ -91,6 +137,13 @@ export function useCurrencies() {
   })
 }
 
+export function useCurrenciesList() {
+  return useQuery({
+    queryKey: ["currencies-list"],
+    queryFn: fetchCurrenciesList,
+  })
+}
+
 export function useAddCurrency() {
   const queryClient = useQueryClient()
 
@@ -102,7 +155,7 @@ export function useAddCurrency() {
   })
 }
 
-export function useUpdateCurrency() {
+export function useUpdateCurrency() { 
   const queryClient = useQueryClient()
 
   return useMutation({

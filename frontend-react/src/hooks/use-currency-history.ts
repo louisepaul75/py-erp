@@ -2,65 +2,54 @@
 
 import { useQuery } from "@tanstack/react-query"
 import type { CurrencyHistory, TimeRange } from "@/types/settings/currency-history"
+import { API_URL } from "@/lib/config";
+import { authService } from "@/lib/auth/authService";
 
 // Hilfsfunktion zum Generieren von Mock-Daten für historische Kurse
-const generateHistoricalData = (
+const generateHistoricalData = async (
   currencyId: string,
   currencyCode: string,
   timeRange: TimeRange,
   baseRate: number,
-): CurrencyHistory => {
-  const now = new Date()
-  const history: { date: string; rate: number }[] = []
-
-  // Anzahl der Datenpunkte je nach Zeitraum
-  let points = 0
-  let intervalHours = 0
-
-  switch (timeRange) {
-    case "day":
-      points = 24
-      intervalHours = 1
-      break
-    case "week":
-      points = 7
-      intervalHours = 24
-      break
-    case "month":
-      points = 30
-      intervalHours = 24
-      break
-    case "quarter":
-      points = 90
-      intervalHours = 24
-      break
-    case "year":
-      points = 12
-      intervalHours = 24 * 30
-      break
-  }
-
-  // Volatilität je nach Währung
-  const volatility = currencyCode === "EUR" ? 0 : currencyCode === "JPY" ? 0.005 : 0.01
-
-  // Generiere Datenpunkte
-  for (let i = points - 1; i >= 0; i--) {
-    const date = new Date(now.getTime() - i * intervalHours * 60 * 60 * 1000)
-
-    // Zufällige Schwankung um den Basiskurs
-    const randomFactor = 1 + (Math.random() - 0.5) * volatility * 2
-    const rate = baseRate * randomFactor
-
-    history.push({
-      date: date.toISOString(),
-      rate: Number(rate.toFixed(4)),
+): Promise<CurrencyHistory> => {
+  try {
+    const token = await authService.getToken()
+    const baseCurrency = "EUR"
+    const endpoint = `/currency/historical-rates-calc/?currency=${currencyCode}&range=${timeRange}&base=${baseCurrency}`
+    
+    const response = await fetch(API_URL + endpoint, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
     })
-  }
 
-  return {
-    currencyId,
-    currencyCode,
-    history,
+    if (!response.ok) {
+      console.error("API Error:", response.status, await response.text())
+      throw new Error(`Failed to fetch historical rates: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    console.log("HISTORICAL DATA", data)
+    const history = data.data.map((item: { date: string; rate: number }) => ({
+      date: item.date,
+      rate: Number(item.rate.toFixed(4)),
+    }))
+
+    return {
+      currencyId,
+      currencyCode,
+      history,
+    }
+  } catch (error) {
+    console.error("Error fetching historical data:", error)
+    return {
+      currencyId,
+      currencyCode,
+      history: [],
+    }
   }
 }
 
@@ -73,7 +62,6 @@ const fetchCurrencyHistory = async (
 ): Promise<CurrencyHistory> => {
   // Simuliere API-Aufruf
   await new Promise((resolve) => setTimeout(resolve, 800))
-
   return generateHistoricalData(currencyId, currencyCode, timeRange, baseRate)
 }
 

@@ -11,9 +11,18 @@ from pyerp.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
+OLD_IMAGE_BASE_URL = "https://webapp.zinnfiguren.de/"
+NEW_IMAGE_BASE_URL = "https://db07.wsz.local/"
+
 
 class ImageTransformer(BaseTransformer):
     """Transformer for image data from the external CMS API."""
+
+    def _replace_base_url(self, url: Optional[str]) -> Optional[str]:
+        """Replace the old base URL with the new one if it matches."""
+        if url and url.startswith(OLD_IMAGE_BASE_URL):
+            return url.replace(OLD_IMAGE_BASE_URL, NEW_IMAGE_BASE_URL, 1)
+        return url
 
     def transform(self, source_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Transform image data to format expected by Django models.
@@ -49,7 +58,8 @@ class ImageTransformer(BaseTransformer):
                     # Extract image URL
                     file_url = original_file.get('file_url')
                     if file_url:
-                        transformed['image_url'] = file_url
+                        # Replace base URL before assigning
+                        transformed['image_url'] = self._replace_base_url(file_url)
                 
                 # Process exported files to find thumbnails or alternative formats
                 exported_files = record.get('exported_files', [])
@@ -58,15 +68,18 @@ class ImageTransformer(BaseTransformer):
                     if exported_file.get('type') in ['png', 'jpg_k']:
                         file_url = exported_file.get('image_url')
                         if file_url:
+                            # Replace base URL
+                            processed_file_url = self._replace_base_url(file_url)
+
                             # If we don't have a primary image URL yet, use this one
                             if 'image_url' not in transformed:
-                                transformed['image_url'] = file_url
+                                transformed['image_url'] = processed_file_url
                             
                             # If this is a smaller image, use it as thumbnail
                             resolution = exported_file.get('resolution', [0, 0])
                             if resolution and isinstance(resolution, list) and len(resolution) >= 2:
                                 if resolution[0] <= 500 and 'thumbnail_url' not in transformed:
-                                    transformed['thumbnail_url'] = file_url
+                                    transformed['thumbnail_url'] = processed_file_url
                 
                 # Process article associations (linking to products)
                 articles = record.get('articles', [])

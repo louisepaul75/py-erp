@@ -1,0 +1,46 @@
+---
+# BuchhaltungsButler Outbound Receipts Synchronization Configuration
+
+buchhaltungsbutler_outbound_receipts:
+  name: "BuchhaltungsButler Outbound Receipts Sync"
+  description: "Synchronize outbound receipts from BuchhaltungsButler to update SalesRecord payment status."
+  
+  source:
+    type: "buchhaltungsbutler_api"
+    extractor_class: "pyerp.sync.extractors.buchhaltungsbutler.BuchhaltungsButlerReceiptExtractor"
+    config:
+      list_direction: "outbound"
+      page_size: 200 # Adjust page size as needed
+  
+  # No transformer needed as the loader handles the direct mapping/logic
+  # transformer:
+  #   type: "passthrough"
+  
+  loader:
+    type: "django_model"
+    class: "pyerp.sync.loaders.sales.SalesRecordStatusLoader"
+    config:
+      # Optional: Explicitly set field mappings if different from defaults
+      # field_mapping:
+      #   api_match_field: "filename"           # API field to match SalesRecord
+      #   api_amount_paid: "amount_paid"      # API field for amount paid
+      #   api_payment_date: "payment_date"     # API field for payment date
+      payment_tolerance_percent: "2.0"      # Tolerance for matching amount paid (e.g., 2.0%)
+
+  schedule:
+    # Define how often this sync should run
+    frequency: "daily" # Example: Run once daily
+    time: "03:00"    # Example: Run at 3 AM
+
+  incremental:
+    # Receipt endpoint might not support reliable incremental sync based on timestamp
+    enabled: false 
+    # timestamp_field: "modification_date" # If API supported it
+    # timestamp_filter_format: "modified_date > {value}" # If API supported it
+
+  notifications:
+    on_failure: ["sysadmin@example.com"]
+    on_success: []
+
+  logging:
+    level: "INFO" 

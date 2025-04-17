@@ -15,7 +15,7 @@ sys.path.append(BASE_DIR)
 # Setup Django environment
 import django
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.settings.development")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.config.settings.development")
 django.setup()
 
 # Add the WSZ_api path to the Python path

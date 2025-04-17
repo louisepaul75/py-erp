@@ -19,6 +19,10 @@ class SyncWorkflowSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['last_job_status', 'last_run_time']
 
+    def create(self, validated_data):
+        # The slug will be auto-generated in model's save()
+        return SyncWorkflow.objects.create(**validated_data)
+    
     def get_last_job(self, obj):
         # Efficiently get the most recent job for this workflow
         return SyncJob.objects.filter(workflow=obj).order_by('-created_at').first()
