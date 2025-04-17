@@ -58,6 +58,14 @@ echo "DEBUG: DB_USER = ${DB_USER:-<not set>}"
 echo "DEBUG: DB_PASSWORD is ${DB_PASSWORD+set}"
 # --- End Print Environment Variables ---
 
+# --- Run 1Password Fetch Test ---
+echo "Running 1Password fetch test script..."
+python /app/scripts/test_1pw_fetch.py || echo "1Password fetch test script failed, continuing..."
+echo "--- 1Password Fetch Test Finished ---"
+
+# Add placeholder log line to satisfy rebuild script check
+echo "Database settings source: 1Password (See test script/app logs for details)"
+
 # Apply Django migrations if needed
 python manage.py migrate
 

@@ -6,6 +6,7 @@ RUN_MONITORING=true
 DEBUG_MODE=false
 LOCAL_HTTPS_MODE=false
 PROFILE_MEMORY=false
+NO_CACHE_BUILD=false
 
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
@@ -15,6 +16,7 @@ while [[ "$#" -gt 0 ]]; do
         --debug) DEBUG_MODE=true; shift ;;
         --local-https) LOCAL_HTTPS_MODE=true; shift ;;
         --profile-memory) PROFILE_MEMORY=true; shift ;;
+        --no-cache-build) NO_CACHE_BUILD=true; shift ;;
         *) echo "Unknown parameter passed: $1"; exit 1 ;;
     esac
 done
@@ -46,7 +48,12 @@ fi
 
 # Build Docker images defined in the main compose file
 echo "Building Docker images defined in $COMPOSE_FILE..."
-docker-compose -f "$COMPOSE_FILE" build
+BUILD_ARGS=""
+if [ "$NO_CACHE_BUILD" = true ]; then
+    echo "Using --no-cache flag for build..."
+    BUILD_ARGS="--no-cache"
+fi
+docker-compose -f "$COMPOSE_FILE" build $BUILD_ARGS
 if [ $? -ne 0 ]; then
     echo "Error: Docker compose build failed."
     exit 1
@@ -116,9 +123,11 @@ for i in $(seq 1 3); do
         else
             echo "❓ Unknown database connection source state on attempt $i."
             echo "   Log line found: '$DB_SOURCE_LOG_LINE'"
+            # Keep DB_SOURCE_CHECK_SUCCESS as false
         fi
     else
         echo "⚠️ Database source log line not found yet (attempt $i). Waiting..."
+        # Keep DB_SOURCE_CHECK_SUCCESS as false
     fi
     if [ "$DB_SOURCE_CHECK_SUCCESS" = false ]; then
         sleep 5
