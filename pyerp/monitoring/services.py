@@ -223,8 +223,10 @@ def validate_database():
             details = f"Database validation script not found at {script_path}"
             logger.error(details)
         else:
-            cmd = [sys.executable, str(script_path), "--verbose", "--json"]
-            result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+            cmd = [sys.executable, str(script_path), "--json"]
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, check=False
+            )
 
             # Check if the script ran successfully
             if result.returncode != 0:
@@ -483,10 +485,13 @@ def run_all_health_checks(as_array=True):
             executor.submit(func): func for func in health_check_functions
         }
 
-        # Process results as they complete
-        for future in as_completed(future_to_func, timeout=HEALTH_CHECK_TIMEOUT):
+        # Process results as they complete without overall timeout
+        for future in as_completed(future_to_func):
             func = future_to_func[future]
-            component_name = func.__name__.replace("check_", "").replace("_", " ").title() # Derive name for logging
+            # Derive name for logging
+            component_name = (
+                func.__name__.replace("check_", "").replace("_", " ").title()
+            )
 
             try:
                 # Get the result, applying the component check timeout
@@ -521,11 +526,14 @@ def run_all_health_checks(as_array=True):
                 })
 
     # Handle checks that might not have completed if the overall timeout was hit
-    # (though as_completed with timeout should handle this)
+    # (though as_completed without timeout makes this less likely to be the
+    # primary issue, individual timeouts are handled above)
     if len(results_list) < len(health_check_functions):
         logger.warning(
-            f"Overall health check timeout ({HEALTH_CHECK_TIMEOUT}s) may have been reached. "
-            f"Completed {len(results_list)} out of {len(health_check_functions)} checks."
+            "Not all health check futures completed. "
+            f"Completed {len(results_list)} out of "
+            f"{len(health_check_functions)} checks. "
+            "This might indicate an issue beyond individual timeouts."
         )
         # Potentially identify which ones are missing if needed
 
@@ -636,7 +644,7 @@ def check_zebra_day():
         dict: Health check result with status, details, and response time
     """
     start_time = time.time()
-    status = HealthCheckResult.STATUS_UNKNOWN
+    status = HealthCheckResult.STATUS_ERROR
     details = "Zebra Day API check not fully implemented."
     component_name = COMPONENT_ZEBRA_DAY
 
@@ -723,8 +731,8 @@ def check_kibana_elastic():
         dict: Health check result with status, details, and response time
     """
     start_time = time.time()
-    status = HealthCheckResult.STATUS_UNKNOWN
-    details = "Kibana/Elastic check not fully implemented."
+    status = HealthCheckResult.STATUS_ERROR
+    details = "Kibana/Elastic check encountered an issue."
     component_name = COMPONENT_KIBANA_ELASTIC
 
     if not connection_manager.is_connection_enabled("kibana_elastic"):
@@ -829,7 +837,7 @@ def check_buchhaltungsbutler():
         dict: Health check result with status, details, and response time
     """
     start_time = time.time()
-    status = HealthCheckResult.STATUS_UNKNOWN
+    status = HealthCheckResult.STATUS_ERROR
     details = "Buchhaltungsbutler API check not fully implemented."
     component_name = COMPONENT_BUCHHALTUNGSBUTTLER
 
@@ -924,7 +932,7 @@ def check_frankfurter_api():
         dict: Health check result with status, details, and response time
     """
     start_time = time.time()
-    status = HealthCheckResult.STATUS_UNKNOWN
+    status = HealthCheckResult.STATUS_ERROR
     details = "Frankfurter API check not fully implemented."
     component_name = COMPONENT_FRANKFURTER_API
 
